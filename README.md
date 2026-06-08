@@ -1,27 +1,42 @@
-# Changelog
+# BlindTest Studio
 
-Toutes les modifications notables de ce projet seront documentées dans ce fichier.
+Application éducative de création de blindtests avec génération LLM, préparation audio locale et présentation autonome.
 
-## [Unreleased]
+## Fonctionnalités
 
-## [1.0.0] - 2023-XX-XX
+- Création de blindtests interactifs
+- Génération de questions avec LLM
+- Préparation audio locale
+- Interface utilisateur moderne et réactive
+- Mode hors-ligne (PWA)
 
-### Ajouts
-- Projet initial
+## Technologies utilisées
 
-### Corrections
-- Aucun
+- HTML5, CSS3, JavaScript (ES6+)
+- Service Worker pour le mode hors-ligne
+- Web Audio API pour la lecture audio
+- LocalStorage pour le stockage local
 
-### Améliorations
-- Aucun
+## Installation
 
-## [0.1.0] - 2023-XX-XX
+1. Clonez le dépôt
+2. Ouvrez `index.html` dans votre navigateur
+3. L'application fonctionne en mode hors-ligne une fois installée
 
-### Ajouts
-- Structure de base du projet
+## Utilisation
 
-### Corrections
-- Aucun
+1. Créez un nouveau blindtest
+2. Générez des questions avec l'IA
+3. Ajoutez vos fichiers audio
+4. Lancez le blindtest
 
-### Améliorations
-- Aucun
+## Structure du projet
+
+- `index.html` : Point d'entrée principal
+- `manifest.json` : Configuration PWA
+- `sw.js` : Service worker pour le mode hors-ligne
+- `audio-extract-server.js` : Serveur pour l'extraction audio
+
+## Licence
+
+MIT
