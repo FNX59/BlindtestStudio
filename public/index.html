@@ -865,6 +865,10 @@ function explainNetworkError(error, cfg) {
 }
 
 async function llmFetch(cfg, url, options = {}) {
+  // For Albert, always use proxy to avoid CORS
+  if (cfg.id === 'albert' && !cfg.proxyUrl) {
+    cfg.proxyUrl = LLM_PROVIDERS.albert.proxyUrl;
+  }
   if (!cfg.proxyUrl) return fetch(url, options);
 
   let body = options.body || null;
