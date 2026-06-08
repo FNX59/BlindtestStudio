@@ -1,0 +1,24 @@
+{
+  "name": "BlindTest Studio - PWA hors-ligne",
+  "short_name": "BlindTest",
+  "description": "Application éducative de création de blindtests avec génération LLM, préparation audio locale et présentation autonome.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "theme_color": "#08000f",
+  "background_color": "#08000f",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='28' fill='%2308000f'/%3E%3Ccircle cx='96' cy='96' r='58' fill='none' stroke='%2300f5ff' stroke-width='8'/%3E%3Ccircle cx='96' cy='96' r='18' fill='%23ff2d78'/%3E%3Ctext x='96' y='164' text-anchor='middle' font-size='24' font-family='Arial' fill='%23ffe600'%3EBT%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='72' fill='%2308000f'/%3E%3Ccircle cx='256' cy='238' r='154' fill='none' stroke='%2300f5ff' stroke-width='22'/%3E%3Ccircle cx='256' cy='238' r='48' fill='%23ff2d78'/%3E%3Cpath d='M326 92v190c0 45-35 82-84 82-42 0-76-25-76-60 0-36 34-61 78-61 20 0 38 5 52 14V92h30z' fill='%23ffe600'/%3E%3Ctext x='256' y='452' text-anchor='middle' font-size='64' font-family='Arial' font-weight='700' fill='%23ffffff'%3EBT%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

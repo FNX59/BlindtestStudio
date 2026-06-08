@@ -1,62 +1,47 @@
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Modèle de site HTML</title>
-    <link rel="stylesheet" href="style.css">
+<html lang<p>© 2023 BlindTest Studio. Tous droits réservés. By Fredy.</p>me="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlindTest Studio</title>
+    <style>
+        /* Styles de base */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        /* Styles du footer */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(160deg, #110019 0%, #09000e 100%);
+            border-top: 1px solid rgba(180, 0, 255, 0.25);
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 14px;
+            z-index: 1000;
+        }
+
+        .footer p {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Autres styles peuvent être ajoutés ici */
+    </style>
 </head>
 <body>
-    <header>
-        <h1>Modèle de site HTML codé en HTML/CSS sur La Forge des Communs Numériques Éducatifs</h1>
-    </header>
-
+    <!-- Contenu principal de la page -->
     <main>
-        <section>
-            <h2>Comment procéder</h2>
-            <ol>
-                <li>Créez une bifurcation de <a href="https://forge.apps.education.fr/iaconellicyril/modele-html" target="_blank">ce projet dans la Forge</a>. Cette étape est bien détaillée <a href="https://docs.forge.apps.education.fr/modeles/tutoriels/tutoriel-site-simple/08_tuto_fork/1_fork_projet/" target="_blank">ici</a>.
-                <img src="images/bifurcation.png" style="max-width:100%;">
-                </li>
-                <li>Modifiez la page <code>public/index.html</code>, ajoutez des pages HTML, ajoutez des images, modifiez le <code>public/style.css</code>, etc. en utilisant éventuellement le WebIDE.</li>
-                <li>Conservez et ne modifiez pas le document <code>.gitlab-ci.yml</code></li>
-                <li>Simplifiez l'url de votre site-web en décochant <i>Utiliser un domaine unique</i> dans <code>Déploiement</code> → <code>Pages</code>.
-                <img src="images/domaine.png" style="max-width:100%;"></li>
-            </ol>
-            
-            <h3>Vidéo explicative pas à pas</h3>
-            <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;"> 
-                <iframe title="Publier une application web statique (en 3min) sur La Forge des Communs Numériques Éducatifs" src="https://tube-sciences-technologies.apps.education.fr/videos/embed/117b6010-1bf6-43cc-9b89-8c39b0a3016e" allowfullscreen="" sandbox="allow-same-origin allow-scripts allow-popups" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0"></iframe>
-            </div>
-        </section>
-
-        <section>
-            <h2>De quoi est constitué le dépôt ?</h2>
-            <ul>
-                <li>d'un document <code>readme.md</code> (à modifier pour présenter votre projet sur le dépôt)</li>
-                <li>d’un document <code>.gitlab-ci.yml</code> (à conserver et ne pas modifier)</li>
-                <li>du dossier <code>public/</code> contenant votre site web, et contenant lui-même :</li>
-                <ul>
-                  <li>une page <code>index.html</code> (que vous pouvez modifier)</li>
-                  <li>quelques images (que vous pouvez supprimer)</li>
-                  <li>un style <code>style.css</code> (que vous pouvez modifier)</li>
-                </ul>
-            </ul>
-        </section>
-
-        <section>
-            <h2>Quand utiliser ce modèle ?</h2>
-            <p>Pour créer un site internet simple en HTML/CSS hébergé sur La Forge des Communs Numériques Éducatifs.</p>
-            <p>Pour créer une application web (des documents annexes, par exemple <code>script.js</code>, peuvent être ajoutés).</p>
-        </section>
-
-        <section>
-            <h2>Licence</h2>
-            <p>Ce projet est sous licence <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.fr"><strong>Creative Commons</strong></a>.</p>
-        </section>
+        <h1>Bienvenue sur BlindTest Studio</h1>
+        <p>Découvrez nos jeux et applications.</p>
     </main>
 
-    <footer>
-        <a href="https://forge.apps.education.fr/"><img src="https://forge.apps.education.fr/docs/communication/visuels/-/raw/main/logo/Logo_La_Forge_large.svg" style="background-color: aliceblue; max-height:5em;"></a>
+    <!-- Footer -->
+    <footer class="footer">
+        <p>© 2023 BlindTest Studio. Tous droits réservés. By Fredy.</p>
     </footer>
 </body>
 </html>

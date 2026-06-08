@@ -1,0 +1,2058 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎵 BlindTest Studio</title>
+<link rel="manifest" id="pwa-manifest">
+<meta name="theme-color" content="#08000f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BlindTest Studio">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%2308000f'/%3E%3Ccircle cx='256' cy='256' r='200' fill='none' stroke='%23ff2d78' stroke-width='18'/%3E%3Ccircle cx='256' cy='256' r='60' fill='%23ff2d78'/%3E%3Cpath d='M256 56 A200 200 0 0 1 456 256' stroke='%2300f5ff' stroke-width='14' fill='none'/%3E%3Ctext x='256' y='290' text-anchor='middle' font-family='serif' font-size='90' fill='%23ffe600'%3E♪%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Orbitron:wght@400;600;700;900&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root {
+  --pink: #ff2d78; --cyan: #00f5ff; --yellow: #ffe600;
+  --purple: #b400ff; --green: #00ff88; --red: #ff3232;
+  --bg: #08000f; --card: #100018;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100vh;background:var(--bg);color:#fff;font-family:'Orbitron',sans-serif;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);pointer-events:none;z-index:9999}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 15% 60%,rgba(180,0,255,.07) 0%,transparent 55%),radial-gradient(ellipse at 85% 15%,rgba(0,245,255,.07) 0%,transparent 55%),radial-gradient(ellipse at 55% 85%,rgba(255,45,120,.05) 0%,transparent 55%);pointer-events:none;z-index:0}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--purple);border-radius:3px}
+@keyframes slide-up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes pulse-pink{0%,100%{box-shadow:0 0 18px var(--pink)}50%{box-shadow:0 0 45px var(--pink),0 0 80px rgba(255,45,120,.3)}}
+@keyframes flicker{0%,97%,100%{opacity:1}98%{opacity:.7}99%{opacity:1}}
+@keyframes rainbow{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+
+/* SCREENS */
+.screen{display:none;min-height:100vh;padding:0;position:relative;z-index:1;animation:slide-up .45s ease both}
+.screen.active{display:flex;flex-direction:column}
+
+/* VINYL DECO */
+.vinyl{position:fixed;border-radius:50%;border:2px solid rgba(180,0,255,.18);animation:spin 22s linear infinite;pointer-events:none;z-index:0}
+.vinyl::before{content:'';position:absolute;inset:22%;border-radius:50%;border:1px solid rgba(0,245,255,.15)}
+.vinyl::after{content:'';position:absolute;inset:46%;border-radius:50%;background:rgba(255,45,120,.25)}
+
+/* NEON TEXT */
+.nt-pink{color:var(--pink);text-shadow:0 0 12px var(--pink),0 0 35px rgba(255,45,120,.35)}
+.nt-cyan{color:var(--cyan);text-shadow:0 0 12px var(--cyan),0 0 35px rgba(0,245,255,.35)}
+.nt-yellow{color:var(--yellow);text-shadow:0 0 12px var(--yellow),0 0 35px rgba(255,230,0,.35)}
+.nt-purple{color:var(--purple);text-shadow:0 0 12px var(--purple),0 0 35px rgba(180,0,255,.35)}
+.nt-green{color:var(--green);text-shadow:0 0 12px var(--green)}
+
+/* CARD */
+.card{background:linear-gradient(160deg,#110019 0%,#09000e 100%);border:1px solid rgba(180,0,255,.25);border-radius:16px;box-shadow:0 0 28px rgba(180,0,255,.18),inset 0 0 18px rgba(0,0,0,.3)}
+
+/* BUTTONS */
+.btn{font-family:'Press Start 2P',monospace;border-radius:8px;cursor:pointer;transition:all .2s;line-height:1.5;border:2px solid}
+.btn-pink{background:rgba(255,45,120,.12);border-color:var(--pink);color:var(--pink);box-shadow:0 0 12px rgba(255,45,120,.35)}
+.btn-pink:hover:not(:disabled){background:rgba(255,45,120,.28);box-shadow:0 0 24px rgba(255,45,120,.6);transform:scale(1.02)}
+.btn-cyan{background:rgba(0,245,255,.08);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px rgba(0,245,255,.3)}
+.btn-cyan:hover:not(:disabled){background:rgba(0,245,255,.2);box-shadow:0 0 24px rgba(0,245,255,.55);transform:scale(1.02)}
+.btn-yellow{background:rgba(255,230,0,.08);border-color:var(--yellow);color:var(--yellow);box-shadow:0 0 12px rgba(255,230,0,.3)}
+.btn-yellow:hover:not(:disabled){background:rgba(255,230,0,.18);box-shadow:0 0 22px rgba(255,230,0,.5);transform:scale(1.02)}
+.btn-purple{background:rgba(180,0,255,.08);border-color:var(--purple);color:var(--purple);box-shadow:0 0 12px rgba(180,0,255,.3)}
+.btn-purple:hover:not(:disabled){background:rgba(180,0,255,.22);box-shadow:0 0 22px rgba(180,0,255,.55);transform:scale(1.02)}
+.btn-green{background:rgba(0,255,136,.08);border-color:var(--green);color:var(--green);box-shadow:0 0 12px rgba(0,255,136,.3)}
+.btn-green:hover:not(:disabled){background:rgba(0,255,136,.18);box-shadow:0 0 22px rgba(0,255,136,.5);transform:scale(1.02)}
+.btn-red{background:rgba(255,50,50,.08);border-color:var(--red);color:var(--red)}
+.btn-red:hover:not(:disabled){background:rgba(255,50,50,.22);transform:scale(1.02)}
+.btn:disabled{opacity:.3;cursor:not-allowed;transform:none!important}
+.btn-sm{padding:6px 14px;font-size:.48rem;letter-spacing:1px}
+.btn-md{padding:11px 26px;font-size:.6rem;letter-spacing:2px}
+.btn-lg{padding:15px 38px;font-size:.72rem;letter-spacing:3px}
+
+/* INPUTS */
+.inp{background:rgba(0,0,0,.4);border:1px solid rgba(0,245,255,.25);border-radius:8px;color:#fff;font-family:'Orbitron',sans-serif;font-size:.82rem;padding:10px 13px;outline:none;width:100%;transition:border-color .2s,box-shadow .2s}
+.inp:focus{border-color:var(--cyan);box-shadow:0 0 10px rgba(0,245,255,.28)}
+label.lbl{font-family:'Press Start 2P',monospace;font-size:.45rem;color:rgba(0,245,255,.7);letter-spacing:2px;display:block;margin-bottom:6px;text-transform:uppercase}
+
+/* HEADER */
+.page-header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid rgba(255,255,255,.04);flex-shrink:0}
+.logo-txt{font-family:'Boogaloo',cursive;font-size:1.4rem;color:var(--pink);text-shadow:0 0 10px var(--pink)}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:12px;border:1px solid rgba(180,0,255,.18)}
+table{width:100%;border-collapse:collapse;min-width:1050px}
+thead tr{background:rgba(180,0,255,.12);border-bottom:1px solid rgba(180,0,255,.22)}
+th{padding:10px 7px;text-align:left;font-family:'Press Start 2P',monospace;font-size:.38rem;color:var(--purple);letter-spacing:1px;white-space:nowrap}
+tbody tr{border-bottom:1px solid rgba(255,255,255,.03);transition:background .15s}
+tbody tr:hover{background:rgba(0,245,255,.025)}
+td{padding:5px 4px}
+.cell-inp{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:#fff;font-family:'Orbitron',sans-serif;font-size:.62rem;padding:6px 8px;width:100%;outline:none;transition:border-color .15s}
+.cell-inp:focus{border-color:var(--cyan)}
+.del-btn{background:transparent;border:none;color:rgba(255,50,50,.45);cursor:pointer;font-size:.95rem;padding:3px 7px;transition:color .15s}
+.del-btn:hover{color:var(--red)}
+.check-cb{accent-color:var(--cyan);width:16px;height:16px;cursor:pointer}
+.revoke-btn{background:rgba(255,230,0,.1);border:1px solid rgba(255,230,0,.35);color:var(--yellow);border-radius:6px;cursor:pointer;padding:5px 9px;font-size:.85rem;transition:all .2s}
+.revoke-btn:hover:not(:disabled){background:rgba(255,230,0,.22)}
+.revoke-btn:disabled{opacity:.35;cursor:wait}
+
+/* PROGRESS */
+.prog-bar{height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;margin-top:14px}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--cyan));transition:width .5s ease;border-radius:3px}
+
+/* SPINNER */
+.spinner{width:30px;height:30px;border:3px solid rgba(255,45,120,.25);border-top-color:var(--pink);border-radius:50%;animation:spin .75s linear infinite;flex-shrink:0}
+
+/* LOG BOX */
+.log-box{max-height:260px;overflow-y:auto;font-family:'VT323',monospace;font-size:1rem;line-height:1.55}
+.log-info{color:rgba(255,255,255,.55)}
+.log-success{color:var(--green)}
+.log-error{color:#ff5555}
+.log-ts{color:rgba(255,255,255,.22);font-size:.88rem}
+
+/* ============================================================
+   PRESENTATION SLIDES
+   ============================================================ */
+#pres-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:10000;flex-direction:column;align-items:center;justify-content:center}
+#pres-overlay.open{display:flex}
+#pres-overlay::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);pointer-events:none}
+
+.pres-slide{display:none;flex-direction:column;align-items:center;width:90vw;max-width:860px;animation:slide-up .38s ease}
+.pres-slide.pres-active{display:flex}
+
+.pres-intro-card,.pres-song-card{width:100%;padding:44px 40px;border-radius:18px}
+.pres-intro-card{background:linear-gradient(140deg,#130020,#0c0018);border:2px solid var(--cyan);box-shadow:0 0 55px rgba(0,245,255,.2),inset 0 0 35px rgba(0,0,0,.45);text-align:center}
+.pres-song-card{background:linear-gradient(155deg,#13001f,#09000e);border:2px solid rgba(180,0,255,.45);box-shadow:0 0 38px rgba(180,0,255,.22),inset 0 0 25px rgba(0,0,0,.35);position:relative;overflow:hidden}
+.pres-song-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pink),var(--cyan),var(--yellow),var(--purple),var(--pink));background-size:300%;animation:rainbow 4s linear infinite}
+
+.pres-song-num{font-family:'Press Start 2P',monospace;font-size:.58rem;color:var(--cyan);letter-spacing:3px;margin-bottom:18px;text-shadow:0 0 8px var(--cyan)}
+.pres-artist{font-family:'Boogaloo',cursive;font-size:clamp(2rem,5vw,3.5rem);line-height:1.1;margin-bottom:8px}
+.pres-title{font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(1.1rem,2.5vw,1.9rem);margin-bottom:28px}
+.pres-bonus-box{background:rgba(0,245,255,.05);border:1px solid rgba(0,245,255,.22);border-radius:10px;padding:18px;margin-bottom:22px}
+.pres-bonus-lbl{font-family:'Press Start 2P',monospace;font-size:.48rem;color:var(--cyan);letter-spacing:2px;margin-bottom:8px}
+.pres-bonus-q{font-family:'Boogaloo',cursive;font-size:1.15rem;color:#ddd;line-height:1.5;margin-bottom:10px}
+.pres-bonus-a{display:none;font-family:'Boogaloo',cursive;font-size:1.08rem;padding-top:10px;border-top:1px solid rgba(255,230,0,.25);animation:slide-up .25s ease}
+.pres-bonus-a.shown{display:block}
+
+.pres-play-btn{width:62px;height:62px;border-radius:50%;border:2px solid var(--pink);background:rgba(255,45,120,.14);color:var(--pink);font-size:1.5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 0 18px rgba(255,45,120,.28);flex-shrink:0}
+.pres-play-btn:hover{background:rgba(255,45,120,.28);box-shadow:0 0 32px rgba(255,45,120,.6);transform:scale(1.06)}
+.pres-play-btn.playing{animation:pulse-pink 1.2s infinite}
+
+.pres-nav{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);display:flex;gap:18px;z-index:10001}
+.pres-nav-btn{width:54px;height:54px;border-radius:50%;border:2px solid var(--cyan);background:rgba(0,245,255,.08);color:var(--cyan);font-size:1.35rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 0 14px rgba(0,245,255,.18)}
+.pres-nav-btn:hover:not(:disabled){background:rgba(0,245,255,.22);box-shadow:0 0 26px rgba(0,245,255,.5)}
+.pres-nav-btn:disabled{opacity:.2;cursor:not-allowed}
+
+.pres-counter{position:fixed;top:18px;right:26px;font-family:'Press Start 2P',monospace;font-size:.55rem;color:rgba(255,255,255,.35);z-index:10001;letter-spacing:2px}
+.pres-close{position:fixed;top:16px;left:22px;z-index:10001}
+
+.pres-vinyl{position:fixed;right:-70px;bottom:70px;width:180px;height:180px;border-radius:50%;border:2px solid rgba(180,0,255,.12);animation:spin 18s linear infinite;opacity:.25;pointer-events:none}
+.pres-vinyl::before{content:'';position:absolute;inset:22%;border-radius:50%;border:1px solid rgba(0,245,255,.18)}
+.pres-vinyl::after{content:'';position:absolute;inset:46%;border-radius:50%;background:rgba(255,45,120,.3)}
+
+/* YT PLAYER hidden */
+#yt-container{position:fixed;bottom:-200px;left:-200px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
+
+/* EXPORT MODAL */
+#export-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:20000;align-items:center;justify-content:center}
+#export-modal.open{display:flex}
+.export-box{width:min(680px,92vw);max-height:88vh;overflow-y:auto}.export-box pre{white-space:pre-wrap;word-break:break-all;font-family:'VT323',monospace;font-size:.95rem;color:rgba(255,255,255,.7);background:rgba(0,0,0,.5);padding:14px;border-radius:8px;max-height:350px;overflow-y:auto;line-height:1.5}
+#prep-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:21000;align-items:center;justify-content:center}
+#prep-modal.open{display:flex}
+.prep-box{width:min(640px,92vw);max-height:86vh;overflow-y:auto}
+.prep-list{font-family:'VT323',monospace;font-size:1.05rem;line-height:1.45;color:rgba(255,255,255,.62)}
+.prep-item{display:flex;gap:9px;align-items:flex-start;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.prep-icon{width:22px;flex-shrink:0;color:var(--cyan)}
+
+/* FULLSCREEN BUTTON */
+#btn-fullscreen{position:fixed;top:14px;right:16px;z-index:30000;width:38px;height:38px;border-radius:8px;border:1px solid rgba(0,245,255,.35);background:rgba(0,245,255,.08);color:var(--cyan);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 0 10px rgba(0,245,255,.15)}
+#btn-fullscreen:hover{background:rgba(0,245,255,.22);box-shadow:0 0 18px rgba(0,245,255,.45)}
+
+/* FOOTER */
+#app-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;padding:5px;font-family:'Press Start 2P',monospace;font-size:.38rem;color:rgba(255,255,255,.75);letter-spacing:2px;z-index:100;pointer-events:none;background:linear-gradient(to top,rgba(8,0,15,.8),transparent)}
+
+/* PWA INSTALL BANNER */
+#pwa-banner{display:none;position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#13001f,#0a0012);border:1px solid rgba(0,245,255,.35);border-radius:14px;padding:14px 22px;box-shadow:0 0 30px rgba(0,245,255,.2);z-index:29000;align-items:center;gap:16px;max-width:420px;width:90vw;animation:slide-up .4s ease}
+#pwa-banner.show{display:flex}
+.pwa-icon{font-size:2rem;flex-shrink:0}
+.pwa-txt{flex:1;min-width:0}
+.pwa-txt strong{display:block;font-family:'Press Start 2P',monospace;font-size:.5rem;color:var(--cyan);letter-spacing:1px;margin-bottom:5px}
+.pwa-txt span{font-family:'Orbitron',sans-serif;font-size:.62rem;color:rgba(255,255,255,.5);line-height:1.5}
+.pwa-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<!-- FULLSCREEN BUTTON (always visible) -->
+<button id="btn-fullscreen" onclick="toggleFullscreen()" title="Plein écran (F11)">⛶</button>
+
+<!-- PWA INSTALL BANNER -->
+<div id="pwa-banner">
+  <div class="pwa-icon">📲</div>
+  <div class="pwa-txt">
+    <strong>INSTALLER L'APP</strong>
+    <span>Installez BlindTest Studio sur votre appareil pour un accès rapide !</span>
+  </div>
+  <div class="pwa-btns">
+    <button class="btn btn-cyan btn-sm" onclick="installPWA()">INSTALLER</button>
+    <button class="btn btn-red btn-sm" onclick="dismissPWA()" style="font-size:.4rem;padding:4px 10px">IGNORER</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div id="app-footer">By Fredy &nbsp;·&nbsp; 🎵 BlindTest Studio</div>
+
+
+<!-- VINYL DECOS -->
+<div class="vinyl" style="width:280px;height:280px;right:-95px;bottom:60px;opacity:.07"></div>
+<div class="vinyl" style="width:140px;height:140px;left:30px;top:120px;opacity:.06;animation-duration:30s"></div>
+
+<!-- ============================================================
+     SCREEN 0: HOME
+     ============================================================ -->
+<div id="screen-home" class="screen active" style="align-items:center;justify-content:center;padding:40px 20px;min-height:100vh">
+  <div style="text-align:center;margin-bottom:56px;animation:slide-up .55s ease">
+    <div style="font-family:'Press Start 2P',monospace;font-size:clamp(.45rem,1.2vw,.72rem);color:rgba(0,245,255,.55);letter-spacing:5px;margin-bottom:14px">★ ★ ★ BIENVENUE SUR ★ ★ ★</div>
+    <div style="font-family:'Boogaloo',cursive;font-size:clamp(3rem,9vw,6.5rem);line-height:1" class="nt-pink">BLINDTEST</div>
+    <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,5vw,3.8rem);line-height:1" class="nt-yellow">STUDIO</div>
+    <div style="font-family:'VT323',monospace;font-size:1.3rem;color:rgba(255,255,255,.3);margin-top:14px;letter-spacing:3px">─── CRÉEZ VOS QUIZ MUSICAUX ───</div>
+  </div>
+  <div style="display:flex;gap:28px;flex-wrap:wrap;justify-content:center">
+    <div class="card mode-card" data-mode="manual" onclick="selectMode('manual')" style="width:320px;padding:38px 30px;cursor:pointer;text-align:center;animation:slide-up .55s .05s ease both;transition:all .3s">
+      <div style="font-size:2.8rem;margin-bottom:14px">✏️</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:.7rem;letter-spacing:2px;margin-bottom:7px" class="nt-cyan">CRÉER MOI-MÊME</div>
+      <div style="font-family:'VT323',monospace;font-size:.95rem;color:rgba(255,255,255,.35);letter-spacing:2px;margin-bottom:18px">SAISIE MANUELLE</div>
+      <div style="font-size:.72rem;color:rgba(255,255,255,.55);line-height:1.7">Tu choisis toi-même les artistes, les titres et les liens YouTube. Contrôle total.</div>
+    </div>
+    <div class="card mode-card" data-mode="auto" onclick="selectMode('auto')" style="width:320px;padding:38px 30px;cursor:pointer;text-align:center;animation:slide-up .55s .12s ease both;transition:all .3s">
+      <div style="font-size:2.8rem;margin-bottom:14px">🤖</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:.7rem;letter-spacing:2px;margin-bottom:7px" class="nt-pink">GÉNÉRATION AUTO</div>
+      <div style="font-family:'VT323',monospace;font-size:.95rem;color:rgba(255,255,255,.35);letter-spacing:2px;margin-bottom:18px">PROPULSÉ PAR IA</div>
+      <div style="font-size:.72rem;color:rgba(255,255,255,.55);line-height:1.7">Donne un thème, le LLM choisi génère les chansons, liens YouTube et questions bonus.</div>
+    </div>
+  </div>
+  <div style="margin-top:55px;font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.18);letter-spacing:3px">INSERT COIN TO CONTINUE</div>
+</div>
+
+<!-- ============================================================
+     SCREEN 1: MANUAL CONFIG
+     ============================================================ -->
+<div id="screen-manual-cfg" class="screen">
+  <div class="page-header">
+    <button class="btn btn-purple btn-sm" onclick="goHome()">← RETOUR</button>
+    <div style="font-family:'Press Start 2P',monospace;font-size:.5rem;color:rgba(255,255,255,.28);letter-spacing:2px">ÉTAPE 1 / 2</div>
+    <div class="logo-txt">🎵 BLINDTEST STUDIO</div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:30px 20px">
+    <div class="card" style="width:480px;padding:40px;animation:slide-up .45s ease">
+      <div style="margin-bottom:28px">
+        <div style="font-family:'Boogaloo',cursive;font-size:1.9rem" class="nt-cyan">Configurer le Blindtest</div>
+      </div>
+      <div style="margin-bottom:18px">
+        <label class="lbl">Thème du blindtest</label>
+        <input class="inp" id="manual-theme" placeholder="ex: Années 80, Rock Français, Disney...">
+      </div>
+      <div style="margin-bottom:28px">
+        <label class="lbl">Nombre de chansons</label>
+        <input class="inp" id="manual-count" type="number" value="10" min="1" max="50">
+      </div>
+      <button class="btn btn-cyan btn-lg" style="width:100%" onclick="initManualTable()">CRÉER LE TABLEAU →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 2: MANUAL TABLE
+     ============================================================ -->
+<div id="screen-manual-table" class="screen">
+  <div class="page-header">
+    <button class="btn btn-purple btn-sm" onclick="showScreen('screen-manual-cfg')">← RETOUR</button>
+    <div style="font-family:'Press Start 2P',monospace;font-size:.5rem;color:rgba(255,255,255,.28);letter-spacing:2px">ÉTAPE 2 / 2</div>
+    <div class="logo-txt">🎵 BLINDTEST STUDIO</div>
+  </div>
+  <div style="flex:1;padding:24px 28px;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:'Boogaloo',cursive;font-size:1.65rem" class="nt-pink" id="manual-table-title">🎵 Thème</div>
+        <div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.38);margin-top:3px;letter-spacing:2px" id="manual-sel-count">0 chanson(s) sélectionnée(s)</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-green btn-sm" onclick="addManualRow()">+ LIGNE</button>
+        <button class="btn btn-pink btn-md" onclick="goToPresentation('manual')">▶ PRÉSENTATION →</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="manual-table">
+        <thead><tr>
+          <th style="width:38px">✓</th>
+          <th style="width:150px">ARTISTE</th>
+          <th style="width:150px">TITRE</th>
+          <th style="width:150px">MP3</th>
+          <th style="width:190px">LIEN YOUTUBE</th>
+          <th style="width:78px">DÉBUT</th>
+          <th style="width:75px">DURÉE (s)</th>
+          <th style="width:170px">QUESTION BONUS</th>
+          <th style="width:155px">RÉPONSE BONUS</th>
+          <th style="width:36px"></th>
+        </tr></thead>
+        <tbody id="manual-tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;flex-wrap:wrap;gap:10px">
+      <button class="btn btn-green btn-sm" onclick="addManualRow()">+ AJOUTER UNE LIGNE</button>
+      <button class="btn btn-pink btn-lg" onclick="goToPresentation('manual')">▶ LANCER LA PRÉSENTATION →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 3: AUTO CONFIG
+     ============================================================ -->
+<div id="screen-auto-cfg" class="screen">
+  <div class="page-header">
+    <button class="btn btn-purple btn-sm" onclick="goHome()">← RETOUR</button>
+    <div style="font-family:'Press Start 2P',monospace;font-size:.5rem;color:rgba(255,255,255,.28);letter-spacing:2px">ÉTAPE 1 / 2</div>
+    <div class="logo-txt">🎵 BLINDTEST STUDIO</div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px 20px;overflow-y:auto">
+    <div class="card" style="width:540px;padding:38px;animation:slide-up .45s ease">
+      <div style="margin-bottom:26px">
+        <div style="font-family:'Boogaloo',cursive;font-size:1.9rem" class="nt-pink">🤖 Génération Automatique</div>
+        <div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.35);margin-top:5px;letter-spacing:2px">PROPULSÉ PAR LE LLM DE VOTRE CHOIX</div>
+      </div>
+      <div style="margin-bottom:18px;padding:15px;background:rgba(255,230,0,.05);border:1px solid rgba(255,230,0,.18);border-radius:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <label class="lbl">LLM</label>
+            <select class="inp" id="auto-provider" onchange="updateLlmFields()">
+              <option value="albert" selected>API Albert 🇫🇷</option>
+              <option value="mistral">Mistral</option>
+              <option value="perplexity">Perplexity</option>
+              <option value="claude">Claude AI</option>
+              <option value="gemini">Gemini</option>
+              <option value="openai">ChatGPT</option>
+
+              <option value="custom">LLM personnalisé</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Modèle</label>
+            <input class="inp" id="auto-model" list="auto-model-list" placeholder="Testez la connexion pour charger les modèles" disabled>
+            <datalist id="auto-model-list"></datalist>
+          </div>
+        </div>
+        <div id="auto-baseurl-wrap" style="display:none;margin-bottom:12px">
+          <label class="lbl">URL API</label>
+          <input class="inp" id="auto-baseurl" placeholder="https://.../v1/chat/completions">
+        </div>
+        <div id="auto-proxy-wrap" style="display:none;margin-bottom:12px">
+          <label class="lbl">URL Worker n8n</label>
+          <input class="inp" id="auto-proxyurl" placeholder="https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy">
+        </div>
+        <label class="lbl">🔑 CLÉ API</label>
+        <input class="inp" id="auto-apikey" type="password" placeholder="Clé API du fournisseur choisi">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn btn-cyan btn-sm" id="auto-test-btn" onclick="testLlmConnection()">TESTER</button>
+          <button class="btn btn-green btn-sm" id="auto-save-key-btn" onclick="saveLlmSettings()">ENREGISTRER</button>
+        </div>
+        <div id="auto-provider-help" style="font-size:.62rem;color:rgba(255,230,0,.45);margin-top:6px;font-family:'Orbitron',sans-serif">API Albert sélectionné par défaut. Les appels transitent via le worker n8n. Renseignez l’URL du worker ci-dessus.</div>
+        <div id="auto-llm-status" style="display:none;margin-top:9px;font-size:.64rem;line-height:1.45;font-family:'Orbitron',sans-serif"></div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="lbl">Thème du blindtest</label>
+        <input class="inp" id="auto-theme" placeholder="ex: Chanson française 80s, Pop internationale...">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div><label class="lbl">Nombre de manches</label><input class="inp" id="auto-rounds" type="number" value="3" min="1" max="10"></div>
+        <div><label class="lbl">Chansons / manche</label><input class="inp" id="auto-spr" type="number" value="5" min="1" max="15"></div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="lbl">Durée extrait (secondes)</label>
+        <input class="inp" id="auto-duration" type="number" value="30" min="10" max="60">
+      </div>
+      <div style="margin-bottom:24px;display:flex;align-items:center;gap:12px">
+        <input type="checkbox" id="auto-bonus" checked style="accent-color:var(--pink);width:17px;height:17px;cursor:pointer">
+        <label for="auto-bonus" style="font-family:'Press Start 2P',monospace;font-size:.5rem;color:var(--pink);cursor:pointer;letter-spacing:1px;text-shadow:0 0 8px var(--pink)">Questions bonus activées</label>
+      </div>
+      <div id="auto-cfg-info" style="padding:11px;background:rgba(0,245,255,.05);border-radius:8px;margin-bottom:22px;font-family:'VT323',monospace;font-size:1.15rem;color:var(--cyan);text-align:center;letter-spacing:2px">▶ 15 CHANSONS (3 manches × 5)</div>
+      <div id="auto-cfg-err" style="display:none;background:rgba(255,50,50,.1);border:1px solid rgba(255,50,50,.35);border-radius:8px;padding:11px;margin-bottom:14px;font-size:.68rem;color:#ff5555;line-height:1.55"></div>
+      <button class="btn btn-pink btn-lg" style="width:100%" id="auto-gen-btn" onclick="generatePlaylist()">🤖 GÉNÉRER LA PLAYLIST →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 4: AUTO TABLE
+     ============================================================ -->
+<div id="screen-auto-table" class="screen">
+  <div class="page-header">
+    <button class="btn btn-purple btn-sm" onclick="showScreen('screen-auto-cfg')">← RETOUR</button>
+    <div style="font-family:'Press Start 2P',monospace;font-size:.5rem;color:rgba(255,255,255,.28);letter-spacing:2px">ÉTAPE 2 / 2</div>
+    <div class="logo-txt">🎵 BLINDTEST STUDIO</div>
+  </div>
+  <div style="flex:1;padding:24px 28px;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:'Boogaloo',cursive;font-size:1.6rem" class="nt-pink" id="auto-table-title">🎵 Thème</div>
+        <div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.38);margin-top:3px;letter-spacing:2px" id="auto-sel-count">0 chanson(s)</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-green btn-sm" onclick="addAutoRow()">+ LIGNE</button>
+        <button class="btn btn-yellow btn-sm" onclick="showScreen('screen-auto-cfg')">⚙ RECONFIGURER</button>
+        <button class="btn btn-pink btn-md" onclick="goToPresentation('auto')">▶ PRÉSENTATION →</button>
+      </div>
+    </div>
+    <div id="auto-table-sections"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
+      <button class="btn btn-green btn-sm" onclick="addAutoRow()">+ AJOUTER UNE LIGNE</button>
+      <button class="btn btn-pink btn-lg" onclick="goToPresentation('auto')">▶ LANCER LA PRÉSENTATION →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PRESENTATION OVERLAY
+     ============================================================ -->
+<div id="pres-overlay">
+  <div class="pres-vinyl"></div>
+  <div style="position:fixed;top:18px;left:22px;z-index:10001">
+    <button class="btn btn-purple btn-sm" onclick="closePresentation()">✕ FERMER</button>
+  </div>
+  <div class="pres-counter" id="pres-counter"></div>
+  <div id="pres-slides-container" style="width:100%;display:flex;justify-content:center;padding:0 20px;position:relative;z-index:1"></div>
+  <div class="pres-nav">
+    <button class="pres-nav-btn" id="pres-prev" onclick="presNavigate(-1)">←</button>
+    <button class="pres-nav-btn" id="pres-next" onclick="presNavigate(1)">→</button>
+  </div>
+</div>
+
+<!-- Hidden YT Player -->
+<div id="yt-container">
+  <div id="yt-player"></div>
+</div>
+
+<!-- PREP MODAL -->
+<div id="prep-modal">
+  <div class="card prep-box" style="padding:28px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div class="spinner"></div>
+      <div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:.58rem" class="nt-cyan">PRÉPARATION DES EXTRAITS</div>
+        <div id="prep-subtitle" style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.42);margin-top:6px;letter-spacing:1px">Initialisation...</div>
+      </div>
+    </div>
+    <div class="prog-bar" style="margin-bottom:14px"><div class="prog-fill" id="prep-fill" style="width:0%"></div></div>
+    <div class="prep-list" id="prep-list"></div>
+  </div>
+</div>
+
+<!-- EXPORT HTML MODAL -->
+<div id="export-modal">
+  <div class="card export-box" style="padding:28px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-family:'Press Start 2P',monospace;font-size:.6rem" class="nt-yellow">📄 EXPORTER LA PRÉSENTATION HTML</div>
+      <button class="btn btn-red btn-sm" onclick="closeExport()">✕</button>
+    </div>
+    <div style="font-size:.7rem;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:18px">
+      Le fichier HTML généré utilise les MP3 intégrés quand ils existent, sinon les liens YouTube pour lire les extraits. Copiez le code ci-dessous dans un fichier <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">.html</code> et ouvrez-le dans votre navigateur.
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <button class="btn btn-pink btn-md" onclick="downloadExportHTML()">⬇ TÉLÉCHARGER .HTML</button>
+      <button class="btn btn-cyan btn-sm" onclick="copyExportHTML()">📋 COPIER</button>
+    </div>
+    <pre id="export-preview" style="max-height:280px"></pre>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// STATE
+// ================================================================
+let currentScreen = 'screen-home';
+let manualSongs = [];
+let autoSongs = [];
+let autoConfig = {};
+let presSlides = [];
+let presCurrentIdx = 0;
+let ytPlayer = null;
+let ytReady = false;
+let exportHtmlContent = '';
+let audioPlayer = new Audio();
+let audioCurrentIdx = null;
+const AUDIO_EXTRACT_API = localStorage.getItem('blindtestAudioExtractApi') || 'http://localhost:3478/api/extract';
+
+// ================================================================
+// NAVIGATION
+// ================================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); currentScreen = id; }
+}
+
+function goHome() {
+  showScreen('screen-home');
+}
+
+function selectMode(mode) {
+  showScreen(mode === 'manual' ? 'screen-manual-cfg' : 'screen-auto-cfg');
+}
+
+// Mode card hover effects
+document.querySelectorAll('.mode-card').forEach(card => {
+  const isManual = card.dataset.mode === 'manual';
+  const col = isManual ? 'rgba(0,245,255,' : 'rgba(255,45,120,';
+  card.addEventListener('mouseenter', () => {
+    card.style.borderColor = col + '0.5)';
+    card.style.boxShadow = `0 0 40px ${col}0.18), inset 0 0 20px rgba(0,0,0,.3)`;
+    card.style.transform = 'translateY(-5px) scale(1.02)';
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.borderColor = 'rgba(180,0,255,.25)';
+    card.style.boxShadow = '';
+    card.style.transform = '';
+  });
+});
+
+// ================================================================
+// AUTO CFG LIVE INFO
+// ================================================================
+function updateAutoInfo() {
+  const r = parseInt(document.getElementById('auto-rounds').value) || 3;
+  const s = parseInt(document.getElementById('auto-spr').value) || 5;
+  document.getElementById('auto-cfg-info').textContent = `▶ ${r * s} CHANSONS (${r} manches × ${s})`;
+}
+['auto-rounds','auto-spr','auto-duration'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateAutoInfo);
+});
+
+// ================================================================
+// MANUAL TABLE
+// ================================================================
+function makeManualRow(data = {}) {
+  return {
+    id: Date.now() + Math.random(),
+    selected: true,
+    artist: data.artist || '',
+    title: data.title || '',
+    mp3Data: data.mp3Data || '',
+    mp3Name: data.mp3Name || '',
+    url: data.url || '',
+    start: data.start || '0:30',
+    duration: data.duration || '30',
+    bonus: data.bonus || '',
+    bonusAnswer: data.bonusAnswer || '',
+  };
+}
+
+function initManualTable() {
+  const theme = document.getElementById('manual-theme').value.trim();
+  const count = parseInt(document.getElementById('manual-count').value) || 10;
+  if (!theme) { alert('Veuillez saisir un thème !'); return; }
+  manualSongs = Array.from({ length: count }, () => makeManualRow());
+  document.getElementById('manual-table-title').textContent = '🎵 ' + theme;
+  renderManualTable();
+  showScreen('screen-manual-table');
+}
+
+function renderManualTable() {
+  const tbody = document.getElementById('manual-tbody');
+  tbody.innerHTML = '';
+  manualSongs.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.style.background = row.selected ? 'rgba(0,245,255,.02)' : 'transparent';
+    tr.innerHTML = `
+      <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected ? 'checked' : ''} onchange="updateManualRow(${i},'selected',this.checked)"></td>
+      ${['artist','title'].map(f => `
+        <td><input class="cell-inp" value="${escHtml(row[f])}" placeholder="${f==='start'?'0:30':f==='duration'?'30':'...'}" onchange="updateManualRow(${i},'${f}',this.value)"></td>
+      `).join('')}
+      ${buildMp3Cell('manual', i, row)}
+      ${['url','start','duration','bonus','bonusAnswer'].map(f => `
+        <td><input class="cell-inp" value="${escHtml(row[f])}" placeholder="${f==='start'?'0:30':f==='duration'?'30':'...'}" onchange="updateManualRow(${i},'${f}',this.value)"></td>
+      `).join('')}
+      <td><button class="del-btn" onclick="deleteManualRow(${i})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  updateManualCount();
+}
+
+function updateManualRow(i, field, val) {
+  manualSongs[i][field] = (field === 'selected') ? val : val;
+  if (field === 'selected') updateManualCount();
+}
+
+function updateManualCount() {
+  const sel = manualSongs.filter(s => s.selected).length;
+  document.getElementById('manual-sel-count').textContent = `${sel} chanson(s) sélectionnée(s)`;
+}
+
+function addManualRow() {
+  manualSongs.push(makeManualRow());
+  renderManualTable();
+}
+
+function deleteManualRow(i) {
+  manualSongs.splice(i, 1);
+  renderManualTable();
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function buildMp3Cell(mode, i, row) {
+  const name = row.mp3Name ? escHtml(row.mp3Name) : 'Aucun MP3';
+  const removeBtn = row.mp3Data ? `<button class="del-btn" type="button" onclick="removeMp3('${mode}',${i})" title="Retirer le MP3">✕</button>` : '';
+  return `<td>
+    <input type="file" accept="audio/mpeg,audio/mp3,audio/*" style="display:none" id="${mode}-mp3-${i}" onchange="handleMp3Upload('${mode}',${i},this.files[0]);this.value=''">
+    <button class="btn btn-cyan btn-sm" type="button" style="padding:5px 9px;font-size:.42rem" onclick="document.getElementById('${mode}-mp3-${i}').click()">MP3</button>
+    <div style="display:flex;align-items:center;gap:4px;margin-top:4px;min-width:0">
+      <span style="font-size:.52rem;color:${row.mp3Data ? 'var(--green)' : 'rgba(255,255,255,.35)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:105px">${name}</span>
+      ${removeBtn}
+    </div>
+  </td>`;
+}
+
+function getSongCollection(mode) {
+  return mode === 'manual' ? manualSongs : autoSongs;
+}
+
+function handleMp3Upload(mode, i, file) {
+  if (!file) return;
+  const looksAudio = file.type.startsWith('audio/') || /\.(mp3|mpeg|wav|ogg|m4a)$/i.test(file.name);
+  if (!looksAudio) {
+    alert('Veuillez choisir un fichier audio MP3.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const songs = getSongCollection(mode);
+    if (!songs[i]) return;
+    songs[i].mp3Data = String(reader.result || '');
+    songs[i].mp3Name = file.name;
+    mode === 'manual' ? renderManualTable() : renderAutoTable();
+  };
+  reader.onerror = () => alert('Impossible de lire ce fichier MP3.');
+  reader.readAsDataURL(file);
+}
+
+function removeMp3(mode, i) {
+  const songs = getSongCollection(mode);
+  if (!songs[i]) return;
+  songs[i].mp3Data = '';
+  songs[i].mp3Name = '';
+  mode === 'manual' ? renderManualTable() : renderAutoTable();
+}
+
+// ================================================================
+// LLM AUTO GENERATION
+// ================================================================
+const LLM_PROVIDERS = {
+  mistral: {
+    label: 'Mistral',
+    model: 'mistral-small-latest',
+    models: ['mistral-small-latest', 'mistral-medium-latest', 'mistral-large-latest', 'codestral-latest'],
+    url: 'https://api.mistral.ai/v1/chat/completions',
+    mode: 'openai',
+    help: 'Utilise l’API Mistral avec authentification Bearer.'
+  },
+  perplexity: {
+    label: 'Perplexity',
+    model: 'sonar',
+    models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro', 'sonar-deep-research'],
+    url: 'https://api.perplexity.ai/chat/completions',
+    mode: 'openai',
+    help: 'Utilise l’API Perplexity Chat Completions avec authentification Bearer.'
+  },
+  claude: {
+    label: 'Claude AI',
+    model: 'claude-3-5-haiku-latest',
+    models: ['claude-3-5-haiku-latest', 'claude-3-5-sonnet-latest', 'claude-3-7-sonnet-latest'],
+    url: 'https://api.anthropic.com/v1/messages',
+    mode: 'anthropic',
+    help: 'Utilise l’API Anthropic Messages avec en-tête x-api-key.'
+  },
+  gemini: {
+    label: 'Gemini',
+    model: 'gemini-2.0-flash',
+    models: ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+    url: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
+    mode: 'gemini',
+    help: 'Utilise Google AI Studio. Gemini est disponible, mais pas sélectionné par défaut.'
+  },
+  openai: {
+    label: 'ChatGPT',
+    model: 'gpt-4o-mini',
+    models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'],
+    url: 'https://api.openai.com/v1/chat/completions',
+    mode: 'openai',
+    help: 'Utilise l’API OpenAI Chat Completions avec authentification Bearer.'
+  },
+  albert: {
+    label: 'API Albert',
+    model: 'mistralai/Mistral-Small-3.2-24B-Instruct-2506',
+    models: [
+      'mistralai/Mistral-Small-3.2-24B-Instruct-2506',
+      'mistralai/Ministral-3B-Instruct-2410',
+      'AgentPublic/llama3-instruct-8b',
+      'AgentPublic/albertlight-7b',
+      'meta-llama/Meta-Llama-3.1-70B-Instruct',
+      'meta-llama/Meta-Llama-3.1-8B-Instruct'
+    ],
+    url: 'https://albert.api.etalab.gouv.fr/v1/chat/completions',
+    proxyUrl: 'https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy',
+    mode: 'openai',
+    help: 'API Albert (IA souveraine française, DINUM). Les appels transitent via le worker n8n pour contourner le blocage CORS du navigateur.'
+  },
+  custom: {
+    label: 'LLM personnalisé',
+    model: '',
+    models: [],
+    url: '',
+    proxyUrl: '',
+    mode: 'openai',
+    help: 'Utilisez une API compatible OpenAI. Renseignez l’URL complète de chat completions.'
+  }
+};
+
+const LLM_STORAGE_PREFIX = 'blindtest_llm_';
+let llmModelAccess = {};
+
+function getSavedLlmSettings(providerId) {
+  try {
+    return JSON.parse(localStorage.getItem(LLM_STORAGE_PREFIX + providerId) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function setLlmStatus(msg, type = 'info') {
+  const el = document.getElementById('auto-llm-status');
+  if (!el) return;
+  const colors = {
+    info: 'rgba(0,245,255,.75)',
+    success: 'var(--green)',
+    error: '#ff5555'
+  };
+  el.textContent = msg;
+  el.style.color = colors[type] || colors.info;
+  el.style.display = 'block';
+}
+
+function getLlmConfig() {
+  const providerId = document.getElementById('auto-provider')?.value || 'albert';
+  const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
+  return {
+    id: providerId,
+    label: provider.label,
+    mode: provider.mode,
+    model: document.getElementById('auto-model').value.trim() || provider.model,
+    url: document.getElementById('auto-baseurl').value.trim() || provider.url,
+    proxyUrl: document.getElementById('auto-proxyurl')?.value.trim() || provider.proxyUrl || '',
+    apiKey: document.getElementById('auto-apikey').value.trim()
+  };
+}
+
+function getModelListUrl(cfg) {
+  if (cfg.id === 'custom') return '';
+  if (cfg.mode === 'gemini') return 'https://generativelanguage.googleapis.com/v1beta/models';
+  try {
+    const url = new URL(cfg.url);
+    url.pathname = url.pathname
+      .replace(/\/chat\/completions\/?$/, '/models')
+      .replace(/\/messages\/?$/, '/models');
+    return url.toString();
+  } catch {
+    return '';
+  }
+}
+
+function getDefaultModel(providerId) {
+  const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
+  return provider.model || provider.models?.[0] || '';
+}
+
+function updateLlmFields() {
+  const providerId = document.getElementById('auto-provider')?.value || 'albert';
+  const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
+  const saved = getSavedLlmSettings(providerId);
+  const modelEl = document.getElementById('auto-model');
+  const modelListEl = document.getElementById('auto-model-list');
+  const baseUrlEl = document.getElementById('auto-baseurl');
+  const baseUrlWrap = document.getElementById('auto-baseurl-wrap');
+  const proxyUrlEl = document.getElementById('auto-proxyurl');
+  const proxyWrap = document.getElementById('auto-proxy-wrap');
+  const apiKeyEl = document.getElementById('auto-apikey');
+  const helpEl = document.getElementById('auto-provider-help');
+
+  if (modelListEl) {
+    modelListEl.innerHTML = '';
+  }
+  if (modelEl) {
+    modelEl.value = '';
+    modelEl.disabled = true;
+    modelEl.placeholder = saved.model
+      ? `Testez la connexion pour réactiver ${saved.model}`
+      : 'Testez la connexion pour charger les modèles';
+  }
+  if (baseUrlEl) {
+    baseUrlEl.value = saved.url || (providerId === 'custom' ? '' : provider.url);
+    baseUrlEl.placeholder = provider.url || 'https://.../v1/chat/completions';
+  }
+  if (proxyUrlEl) {
+    proxyUrlEl.value = saved.proxyUrl || provider.proxyUrl || '';
+    proxyUrlEl.placeholder = provider.proxyUrl || 'https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy';
+  }
+  if (apiKeyEl) {
+    apiKeyEl.value = saved.apiKey || '';
+    apiKeyEl.placeholder = providerId === 'albert'
+      ? 'Clé Albert (ou vide si configurée dans le worker n8n)'
+      : 'Clé API du fournisseur choisi';
+  }
+  if (baseUrlWrap) {
+    baseUrlWrap.style.display = ['albert', 'custom'].includes(providerId) ? 'block' : 'none';
+  }
+  if (proxyWrap) {
+    proxyWrap.style.display = ['albert', 'custom'].includes(providerId) ? 'block' : 'none';
+  }
+  if (helpEl) helpEl.textContent = saved.apiKey ? `${provider.help} Clé enregistrée pour ce fournisseur.` : provider.help;
+  const statusEl = document.getElementById('auto-llm-status');
+  if (statusEl) statusEl.style.display = 'none';
+  llmModelAccess[providerId] = false;
+}
+
+function saveLlmSettings() {
+  const cfg = getLlmConfig();
+  if (!cfg.apiKey && !(cfg.id === 'albert' && cfg.proxyUrl)) { setLlmStatus(`Saisissez une clé API ${cfg.label} avant d’enregistrer.`, 'error'); return; }
+  if (cfg.id === 'custom' && !cfg.url) { setLlmStatus('Saisissez une URL API pour ce fournisseur personnalisé.', 'error'); return; }
+  localStorage.setItem(LLM_STORAGE_PREFIX + cfg.id, JSON.stringify({
+    apiKey: cfg.apiKey,
+    model: document.getElementById('auto-model').disabled ? '' : cfg.model,
+    url: cfg.url,
+    proxyUrl: cfg.proxyUrl
+  }));
+  setLlmStatus(`Clé API ${cfg.label} enregistrée dans ce navigateur.`, 'success');
+}
+
+async function readErrorMessage(res, providerLabel) {
+  const raw = await res.text();
+  try {
+    const err = JSON.parse(raw);
+    return err.error?.message || err.message || `${providerLabel} ${res.status}`;
+  } catch {
+    return raw || `${providerLabel} ${res.status}`;
+  }
+}
+
+function explainNetworkError(error, cfg) {
+  const msg = error?.message || String(error || '');
+  if (/networkerror|failed to fetch|load failed|fetch resource/i.test(msg)) {
+    if (cfg?.id === 'albert') {
+      return 'Le navigateur ne peut pas joindre Albert directement (CORS). Vérifiez l’URL du worker n8n, la clé Albert, et que le worker est bien actif.';
+    }
+    return 'Erreur réseau. Vérifiez la connexion, l’URL API et les autorisations CORS du fournisseur.';
+  }
+  return msg;
+}
+
+async function llmFetch(cfg, url, options = {}) {
+  if (!cfg.proxyUrl) return fetch(url, options);
+
+  let body = options.body || null;
+  if (body && typeof body !== 'string') body = JSON.stringify(body);
+
+  if (cfg.id === 'albert') {
+    const albertPayload = {};
+    if ((options.method || 'GET').toUpperCase() === 'GET') {
+      albertPayload._get = new URL(url).pathname.replace(/^\/v1/, '') || '/models';
+    } else {
+      Object.assign(albertPayload, body ? JSON.parse(body) : {});
+      albertPayload._path = new URL(url).pathname.replace(/^\/v1/, '') || '/chat/completions';
+    }
+    return fetch(cfg.proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(albertPayload)
+    });
+  }
+
+  return fetch(cfg.proxyUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      body
+    })
+  });
+}
+
+async function callLlm(prompt, cfg) {
+  if (cfg.mode === 'gemini') {
+    const url = cfg.url.replace('{model}', encodeURIComponent(cfg.model));
+    const res = await llmFetch(cfg, `${url}?key=${encodeURIComponent(cfg.apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.85, maxOutputTokens: 4096 }
+      })
+    });
+    if (!res.ok) throw new Error(await readErrorMessage(res, cfg.label));
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+
+  if (cfg.mode === 'anthropic') {
+    const res = await llmFetch(cfg, cfg.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': cfg.apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: cfg.model,
+        max_tokens: 4096,
+        temperature: 0.85,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) throw new Error(await readErrorMessage(res, cfg.label));
+    const data = await res.json();
+    return (data.content || []).map(part => part.text || '').join('\n');
+  }
+
+  const res = await llmFetch(cfg, cfg.url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${cfg.apiKey}`
+    },
+    body: JSON.stringify({
+      model: cfg.model,
+      temperature: 0.85,
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res, cfg.label));
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
+}
+
+async function fetchLlmModels(cfg) {
+  if (cfg.id === 'custom') return [];
+
+  if (cfg.mode === 'gemini') {
+    const url = `${getModelListUrl(cfg)}?key=${encodeURIComponent(cfg.apiKey)}`;
+    const res = await llmFetch(cfg, url);
+    if (!res.ok) throw new Error(await readErrorMessage(res, cfg.label));
+    const data = await res.json();
+    return (data.models || [])
+      .filter(m => !m.supportedGenerationMethods || m.supportedGenerationMethods.includes('generateContent'))
+      .map(m => String(m.name || '').replace(/^models\//, ''))
+      .filter(Boolean);
+  }
+
+  const modelsUrl = getModelListUrl(cfg);
+  if (!modelsUrl) return [];
+  const headers = cfg.mode === 'anthropic'
+    ? {
+        'x-api-key': cfg.apiKey,
+        'anthropic-version': '2023-06-01'
+      }
+    : {
+        'Authorization': `Bearer ${cfg.apiKey}`
+      };
+
+  const res = await llmFetch(cfg, modelsUrl, { headers });
+  if (!res.ok) throw new Error(await readErrorMessage(res, cfg.label));
+  const data = await res.json();
+  return (data.data || data.models || [])
+    .map(m => m.id || m.name)
+    .filter(Boolean);
+}
+
+function enableModelChoice(providerId, models, preferredModel = '') {
+  const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
+  const saved = getSavedLlmSettings(providerId);
+  const uniqueModels = Array.from(new Set((models || []).concat(provider.models || []).filter(Boolean)));
+  const modelListEl = document.getElementById('auto-model-list');
+  const modelEl = document.getElementById('auto-model');
+  if (modelListEl) {
+    modelListEl.innerHTML = uniqueModels.map(m => `<option value="${escHtml(m)}"></option>`).join('');
+  }
+  if (modelEl) {
+    modelEl.disabled = false;
+    modelEl.placeholder = 'Choisissez ou saisissez un modèle';
+    modelEl.value = preferredModel || saved.model || uniqueModels[0] || getDefaultModel(providerId);
+  }
+  llmModelAccess[providerId] = true;
+}
+
+function extractJsonPayload(text) {
+  const clean = String(text || '').trim()
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```$/i, '')
+    .trim();
+  try {
+    return JSON.parse(clean);
+  } catch {
+    const startArray = clean.indexOf('[');
+    const endArray = clean.lastIndexOf(']');
+    if (startArray !== -1 && endArray > startArray) {
+      return JSON.parse(clean.slice(startArray, endArray + 1));
+    }
+    const startObject = clean.indexOf('{');
+    const endObject = clean.lastIndexOf('}');
+    if (startObject !== -1 && endObject > startObject) {
+      return JSON.parse(clean.slice(startObject, endObject + 1));
+    }
+    throw new Error('La réponse du LLM ne contient pas de JSON valide.');
+  }
+}
+
+function buildThemeRules(theme) {
+  const t = String(theme || '').toLowerCase();
+  const rules = [
+    `- Respecte TOUS les qualificatifs du thème "${theme}" : genre, pays/zone, langue, période, décennie, ambiance.`,
+    '- Ne remplace jamais une contrainte géographique par une scène équivalente d’un autre pays.',
+    '- Si le thème contient une décennie, chaque titre doit être sorti pendant cette décennie, pas seulement dans un style proche.',
+    '- Si un morceau ne respecte pas une contrainte explicite du thème, exclue-le même s’il est célèbre.'
+  ];
+  if (/\b(us|usa|u\.s\.|u\.s\.a\.|united states|états-unis|etats-unis|américain|americaine|américaine|american)\b/i.test(theme)) {
+    rules.push('- CONTRAINTE US OBLIGATOIRE : tous les artistes/groupes doivent venir des États-Unis. Exclure rap français, belge, canadien, britannique ou autre pays.');
+    rules.push('- Pour un thème comme "Rap US 90", propose uniquement du rap/hip-hop américain sorti entre 1990 et 1999.');
+  }
+  if (/\b(fr|france|français|francaise|française|french)\b/i.test(theme)) {
+    rules.push('- CONTRAINTE FRANÇAISE OBLIGATOIRE : tous les artistes/groupes doivent être français ou clairement liés à la scène française.');
+  }
+  if (/\b90s|années 90|annees 90|1990|90\b/i.test(t)) {
+    rules.push('- CONTRAINTE ANNÉES 90 : les titres doivent être sortis entre 1990 et 1999 inclus.');
+  }
+  return rules.join('\n');
+}
+
+async function testLlmConnection() {
+  const currentCfg = getLlmConfig();
+  const saved = getSavedLlmSettings(currentCfg.id);
+  const cfg = { ...currentCfg, model: saved.model || currentCfg.model || getDefaultModel(currentCfg.id) };
+  const btn = document.getElementById('auto-test-btn');
+  if (!cfg.apiKey && !(cfg.id === 'albert' && cfg.proxyUrl)) { setLlmStatus(`Saisissez une clé API ${cfg.label} avant de tester.`, 'error'); return; }
+  if (!cfg.model) { setLlmStatus('Aucun modèle de test n’est défini pour ce fournisseur.', 'error'); return; }
+  if (!cfg.url) { setLlmStatus('Saisissez une URL API avant de tester.', 'error'); return; }
+
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'TEST...'; }
+    setLlmStatus(`Test de connexion ${cfg.label} en cours...`, 'info');
+    const text = await callLlm('Réponds uniquement avec le mot OK.', cfg);
+    if (!String(text || '').trim()) throw new Error('réponse vide');
+    let models = [];
+    let modelSource = 'découverts via l’API';
+    try {
+      models = await fetchLlmModels(cfg);
+    } catch (modelErr) {
+      models = LLM_PROVIDERS[cfg.id]?.models || [];
+      modelSource = 'chargés depuis la liste de secours après connexion';
+      if (!models.length) throw modelErr;
+    }
+    enableModelChoice(cfg.id, models, saved.model || cfg.model);
+    setLlmStatus(`Connexion ${cfg.label} OK. Modèles ${modelSource}.`, 'success');
+  } catch (e) {
+    llmModelAccess[cfg.id] = false;
+    setLlmStatus(`Connexion ${cfg.label} impossible : ${explainNetworkError(e, cfg)}.`, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'TESTER'; }
+  }
+}
+
+async function generatePlaylist() {
+  const llmCfg = getLlmConfig();
+  const theme = document.getElementById('auto-theme').value.trim();
+  const rounds = parseInt(document.getElementById('auto-rounds').value) || 3;
+  const spr = parseInt(document.getElementById('auto-spr').value) || 5;
+  const duration = parseInt(document.getElementById('auto-duration').value) || 30;
+  const bonus = document.getElementById('auto-bonus').checked;
+
+  const errEl = document.getElementById('auto-cfg-err');
+  errEl.style.display = 'none';
+
+  if (!llmCfg.apiKey && !(llmCfg.id === 'albert' && llmCfg.proxyUrl)) { showErr(`Veuillez saisir votre clé API ${llmCfg.label} !`); return; }
+  if (!llmModelAccess[llmCfg.id] || document.getElementById('auto-model').disabled) { showErr('Veuillez tester la connexion avant de choisir le modèle et générer la playlist.'); return; }
+  if (!llmCfg.model) { showErr('Veuillez saisir le modèle à utiliser !'); return; }
+  if (!llmCfg.url) { showErr('Veuillez saisir l’URL API à utiliser !'); return; }
+  if (!theme) { showErr('Veuillez saisir un thème !'); return; }
+
+  const btn = document.getElementById('auto-gen-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ GÉNÉRATION EN COURS...';
+
+  const total = rounds * spr;
+  const bonusLine = bonus ? `- Pour chaque chanson, propose une question bonus (anecdote ou fait intéressant) et sa réponse.` : `- Les champs "bonus" et "bonusAnswer" doivent être des chaînes vides "".`;
+  const themeRules = buildThemeRules(theme);
+
+  const prompt = `Tu es un expert en musique. Génère une playlist de ${total} chansons pour un blindtest musical sur le thème : "${theme}".
+
+CONTRAINTES DU THÈME :
+${themeRules}
+
+RÈGLES :
+- Chansons variées et emblématiques du thème
+- Aucun doublon
+- Chaque objet doit respecter exactement les contraintes du thème
+- Timing de début entre 0:20 et 1:30 (évite les longues intros)
+- Durée de l'extrait : ${duration} secondes
+${bonusLine}
+- Répartis les ${total} chansons en ${rounds} manches de ${spr} chansons (champ "manche" : 1 à ${rounds})
+- Pour "youtubeUrl" : utilise de vrais liens YouTube connus. Si incertain, utilise https://www.youtube.com/results?search_query=ARTISTE+TITRE
+- Avant de répondre, vérifie mentalement chaque chanson : artiste, pays/scène, décennie, genre et adéquation au thème.
+- Pour le champ "justification" : explique en 1-2 phrases pourquoi cette chanson correspond au thème "${theme}" (décennie, genre, artiste emblématique, popularité...).
+
+Réponds UNIQUEMENT avec un tableau JSON valide, sans markdown, sans backticks, sans commentaires :
+[{"artist":"...","title":"...","youtubeUrl":"https://...","start":"0:45","duration":${duration},"bonus":"...","bonusAnswer":"...","justification":"...","manche":1}]
+
+Génère exactement ${total} objets.`;
+
+  try {
+    const text = await callLlm(prompt, llmCfg);
+    const parsed = extractJsonPayload(text);
+    if (!Array.isArray(parsed)) throw new Error('Le JSON reçu doit être un tableau de chansons.');
+    autoSongs = parsed.map(s => ({ ...s, id: Date.now() + Math.random(), selected: true, bonusEnabled: !!bonus, mp3Data: '', mp3Name: '' }));
+    autoConfig = { theme, rounds, spr, duration, bonus, llm: llmCfg };
+    document.getElementById('auto-table-title').textContent = '🎵 ' + theme;
+    renderAutoTable();
+    showScreen('screen-auto-table');
+  } catch (e) {
+    showErr(`Erreur ${llmCfg.label} : ${explainNetworkError(e, llmCfg)}. Vérifiez la clé API, le modèle et l’URL.`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 GÉNÉRER LA PLAYLIST →';
+  }
+
+  function showErr(msg) {
+    errEl.textContent = '⚠ ' + msg;
+    errEl.style.display = 'block';
+  }
+}
+
+updateLlmFields();
+
+// ================================================================
+// AUTO TABLE
+// ================================================================
+function renderAutoTable() {
+  const container = document.getElementById('auto-table-sections');
+  container.innerHTML = '';
+
+  // Group by manche
+  const groups = {};
+  autoSongs.forEach((s, i) => {
+    const m = s.manche || Math.floor(i / (autoConfig.spr || 5)) + 1;
+    if (!groups[m]) groups[m] = [];
+    groups[m].push({ ...s, _i: i });
+  });
+
+  Object.entries(groups).forEach(([manche, songs]) => {
+    const sec = document.createElement('div');
+    sec.style.marginBottom = '26px';
+    sec.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;flex-wrap:wrap">
+        <div style="font-family:'Press Start 2P',monospace;font-size:.55rem;color:var(--purple);letter-spacing:3px;text-shadow:0 0 8px var(--purple)">▌ MANCHE ${manche}</div>
+        <button class="btn btn-green btn-sm" onclick="addAutoRow(${parseInt(manche) || 1})">+ LIGNE MANCHE ${manche}</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:38px">✓</th>
+            <th style="width:148px">ARTISTE</th>
+            <th style="width:148px">TITRE</th>
+            <th style="width:200px">JUSTIFICATION</th>
+            <th style="width:150px">MP3</th>
+            <th style="width:185px">LIEN YOUTUBE</th>
+            <th style="width:74px">DÉBUT</th>
+            <th style="width:70px">DURÉE (s)</th>
+            <th style="width:70px">BONUS</th>
+            <th style="width:165px">QUESTION BONUS</th>
+            <th style="width:148px">RÉPONSE</th>
+            <th style="width:44px">🔄</th>
+            <th style="width:34px"></th>
+          </tr></thead>
+          <tbody>${songs.map(row => buildAutoRow(row)).join('')}</tbody>
+        </table>
+      </div>`;
+    container.appendChild(sec);
+  });
+  updateAutoCount();
+}
+
+function buildAutoRow(row) {
+  const i = row._i;
+  const bonusEnabled = row.bonusEnabled !== false;
+  const bonusCells = `
+    <td style="text-align:center"><input type="checkbox" class="check-cb" ${bonusEnabled?'checked':''} onchange="updateAutoRow(${i},'bonusEnabled',this.checked)"></td>
+    <td><input class="cell-inp" value="${escHtml(row.bonus)}" ${bonusEnabled?'':'disabled'} onchange="updateAutoRow(${i},'bonus',this.value)"></td>
+    <td><input class="cell-inp" value="${escHtml(row.bonusAnswer)}" ${bonusEnabled?'':'disabled'} onchange="updateAutoRow(${i},'bonusAnswer',this.value)"></td>`;
+  const justif = row.justification || '';
+  return `<tr style="border-bottom:1px solid rgba(255,255,255,.03)">
+    <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected?'checked':''} onchange="updateAutoRow(${i},'selected',this.checked)"></td>
+    ${['artist','title'].map(f =>
+      `<td><input class="cell-inp" value="${escHtml(row[f])}" onchange="updateAutoRow(${i},'${f}',this.value)"></td>`
+    ).join('')}
+    <td>
+      <div style="font-family:'Orbitron',sans-serif;font-size:.56rem;color:rgba(255,255,255,.9);line-height:1.5;padding:5px 6px;background:rgba(180,0,255,.06);border-radius:5px;border-left:2px solid rgba(180,0,255,.4);min-height:28px;font-style:italic">${escHtml(justif) || '<span style="opacity:.3">—</span>'}</div>
+    </td>
+    ${buildMp3Cell('auto', i, row)}
+    ${['youtubeUrl','start','duration'].map(f =>
+      `<td><input class="cell-inp" value="${escHtml(row[f])}" onchange="updateAutoRow(${i},'${f}',this.value)"></td>`
+    ).join('')}
+    ${bonusCells}
+    <td><button class="revoke-btn" id="revoke-${i}" onclick="revokeSong(${i})" title="Remplacer avec le LLM choisi">🔄</button></td>
+    <td><button class="del-btn" onclick="deleteAutoRow(${i})">✕</button></td>
+  </tr>`;
+}
+
+function updateAutoRow(i, field, val) {
+  autoSongs[i][field] = val;
+  if (field === 'selected') updateAutoCount();
+  if (field === 'bonusEnabled') renderAutoTable();
+}
+
+function updateAutoCount() {
+  const sel = autoSongs.filter(s => s.selected).length;
+  document.getElementById('auto-sel-count').textContent = `${sel} chanson(s) · ${autoConfig.rounds} manche(s)`;
+}
+
+function askAutoManche() {
+  const rounds = Math.max(1, parseInt(autoConfig.rounds) || 1);
+  if (rounds === 1) return 1;
+  const raw = prompt(`Ajouter dans quelle manche ? (1 à ${rounds})`, '1');
+  if (raw === null) return null;
+  const manche = parseInt(raw);
+  if (!Number.isInteger(manche) || manche < 1 || manche > rounds) {
+    alert(`Veuillez choisir une manche entre 1 et ${rounds}.`);
+    return null;
+  }
+  return manche;
+}
+
+function addAutoRow(manche = null) {
+  const targetManche = manche ?? askAutoManche();
+  if (!targetManche) return;
+  autoSongs.push({
+    id: Date.now() + Math.random(), selected: true,
+    artist:'', title:'', youtubeUrl:'', start:'0:30',
+    mp3Data:'', mp3Name:'',
+    duration: autoConfig.duration || 30,
+    bonus:'', bonusAnswer:'',
+    bonusEnabled: !!autoConfig.bonus,
+    manche: targetManche,
+  });
+  renderAutoTable();
+}
+
+function deleteAutoRow(i) {
+  autoSongs.splice(i, 1);
+  renderAutoTable();
+}
+
+async function revokeSong(i) {
+  const btn = document.getElementById(`revoke-${i}`);
+  if (!btn) return;
+  btn.disabled = true; btn.textContent = '⏳';
+  const existing = autoSongs.map(s => `${s.artist} - ${s.title}`).join(', ');
+  const song = autoSongs[i];
+  const themeRules = buildThemeRules(autoConfig.theme || '');
+  const prompt = `Tu es un expert en musique. Propose UNE SEULE chanson de remplacement pour un blindtest sur le thème "${autoConfig.theme}".
+
+CONTRAINTES DU THÈME :
+${themeRules}
+
+Chanson à remplacer : "${song.artist} - ${song.title}"
+Chansons déjà dans la liste (à exclure absolument) : ${existing}
+
+RÈGLES :
+- La chanson proposée doit respecter toutes les contraintes du thème.
+- Si le thème impose US/USA/États-Unis, l’artiste doit venir des États-Unis.
+- Si le thème impose une décennie, le titre doit être sorti pendant cette décennie.
+
+Réponds UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) :
+{"artist":"...","title":"...","youtubeUrl":"https://...","start":"0:45","duration":${autoConfig.duration || 30},"bonus":"...","bonusAnswer":"...","manche":${song.manche || 1}}`;
+
+  try {
+    const llmCfg = autoConfig.llm || getLlmConfig();
+    const text = await callLlm(prompt, llmCfg);
+    const newSong = extractJsonPayload(text);
+    autoSongs[i] = { ...newSong, id: Date.now() + Math.random(), selected: true, bonusEnabled: song.bonusEnabled !== false, mp3Data: '', mp3Name: '' };
+    renderAutoTable();
+  } catch (e) {
+    alert(`Erreur remplacement : ${explainNetworkError(e, autoConfig.llm || getLlmConfig())}`);
+    if (btn) { btn.disabled = false; btn.textContent = '🔄'; }
+  }
+}
+
+// ================================================================
+// YOUTUBE PLAYER
+// ================================================================
+function loadYTAPI() {
+  if (document.getElementById('yt-api-script')) return;
+  const s = document.createElement('script');
+  s.id = 'yt-api-script';
+  s.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(s);
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function waitForYTReady(timeout = 6000) {
+  loadYTAPI();
+  if (ytReady) return Promise.resolve(true);
+  return new Promise(resolve => {
+    const start = Date.now();
+    const timer = setInterval(() => {
+      if (ytReady) {
+        clearInterval(timer);
+        resolve(true);
+      } else if (Date.now() - start > timeout) {
+        clearInterval(timer);
+        resolve(false);
+      }
+    }, 120);
+  });
+}
+
+function preloadMp3(src, start = 0) {
+  return new Promise(resolve => {
+    const a = new Audio();
+    let done = false;
+    const finish = ok => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      a.oncanplaythrough = null;
+      a.onerror = null;
+      resolve(ok);
+    };
+    const timer = setTimeout(() => finish(false), 5000);
+    a.preload = 'auto';
+    a.oncanplaythrough = () => {
+      try { a.currentTime = start; } catch {}
+      finish(true);
+    };
+    a.onerror = () => finish(false);
+    a.src = src;
+    a.load();
+  });
+}
+
+function setPrepProgress(done, total) {
+  const fill = document.getElementById('prep-fill');
+  const subtitle = document.getElementById('prep-subtitle');
+  const pct = total ? Math.round((done / total) * 100) : 100;
+  if (fill) fill.style.width = `${pct}%`;
+  if (subtitle) subtitle.textContent = `${done} / ${total} extrait(s) préparé(s)`;
+}
+
+function addPrepLine(icon, text, color = 'rgba(255,255,255,.62)') {
+  const list = document.getElementById('prep-list');
+  if (!list) return;
+  const div = document.createElement('div');
+  div.className = 'prep-item';
+  div.innerHTML = `<span class="prep-icon" style="color:${color}">${icon}</span><span>${escHtml(text)}</span>`;
+  list.appendChild(div);
+}
+
+function canDownloadAudio(song) {
+  return !!((song.youtubeUrl && String(song.youtubeUrl).trim()) || (song.artist && song.title));
+}
+
+async function downloadYoutubeClip(song) {
+  const response = await fetch(AUDIO_EXTRACT_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      youtubeUrl: song.youtubeUrl,
+      query: `${song.artist || ''} ${song.title || ''}`.trim(),
+      start: song.start,
+      duration: song.duration,
+      artist: song.artist,
+      title: song.title
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok || !data.dataUrl) {
+    throw new Error(data.error || `Service audio indisponible (${response.status})`);
+  }
+  return data;
+}
+
+async function prepareAudioBeforePresentation(songs) {
+  const modal = document.getElementById('prep-modal');
+  const list = document.getElementById('prep-list');
+  if (list) list.innerHTML = '';
+  setPrepProgress(0, songs.length);
+  modal?.classList.add('open');
+
+  const needsYoutube = songs.some(s => !s.mp3Data && canDownloadAudio(s));
+  if (needsYoutube) {
+    addPrepLine('▶', `Connexion au service local audio : ${AUDIO_EXTRACT_API}`, 'var(--yellow)');
+    addPrepLine('▶', 'Si le service local est absent, le lecteur YouTube intégré prendra le relais.', 'var(--yellow)');
+    const ready = await waitForYTReady();
+    addPrepLine(ready ? '✓' : '!', ready ? 'Lecteur YouTube prêt.' : 'Lecteur YouTube encore en chargement, la lecture pourra nécessiter un second essai.', ready ? 'var(--green)' : 'var(--yellow)');
+  }
+
+  let done = 0;
+  for (const song of songs) {
+    const label = `${song.artist} - ${song.title}`;
+    if (song.mp3Data) {
+      addPrepLine('…', `Préchargement MP3 : ${label}`, 'var(--cyan)');
+      const ok = await preloadMp3(song.mp3Data, song.mp3FromYoutube ? 0 : parseTimeToSec(song.start));
+      addPrepLine(ok ? '✓' : '!', ok ? `MP3 prêt : ${label}` : `MP3 non préchargé, tentative de lecture directe : ${label}`, ok ? 'var(--green)' : 'var(--yellow)');
+    } else if (canDownloadAudio(song)) {
+      addPrepLine('…', `Téléchargement de l'extrait YouTube : ${label}`, 'var(--cyan)');
+      try {
+        const clip = await downloadYoutubeClip(song);
+        song.mp3Data = clip.dataUrl;
+        song.mp3Name = clip.filename || `${song.artist} - ${song.title}.mp3`;
+        song.mp3FromYoutube = true;
+        if (song.__source) {
+          song.__source.mp3Data = song.mp3Data;
+          song.__source.mp3Name = song.mp3Name;
+          song.__source.mp3FromYoutube = true;
+        }
+        addPrepLine('✓', `Extrait MP3 intégré : ${label}`, 'var(--green)');
+      } catch (error) {
+        addPrepLine('!', `Téléchargement impossible, fallback YouTube : ${label} (${error.message})`, 'var(--yellow)');
+      }
+    } else {
+      addPrepLine('!', `Aucune source audio : ${label}`, '#ff5555');
+    }
+    done++;
+    setPrepProgress(done, songs.length);
+    await wait(80);
+  }
+
+  await wait(450);
+  modal?.classList.remove('open');
+}
+
+window.onYouTubeIframeAPIReady = function() {
+  ytPlayer = new YT.Player('yt-player', {
+    width: 1, height: 1,
+    playerVars: { autoplay: 0, controls: 0 },
+    events: {
+      onReady: () => { ytReady = true; },
+      onStateChange: (e) => {
+        if (e.data === YT.PlayerState.PLAYING) {
+          // schedule stop after duration
+          const slide = presSlides[presCurrentIdx];
+          if (slide && slide.duration) {
+            clearTimeout(window._ytStopTimer);
+            window._ytStopTimer = setTimeout(() => {
+              if (ytPlayer) ytPlayer.pauseVideo();
+              updatePlayBtn(false);
+            }, (parseInt(slide.duration) || 30) * 1000);
+          }
+        }
+        if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
+          updatePlayBtn(false);
+        }
+      }
+    }
+  });
+};
+
+function extractYtId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:v=|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function parseTimeToSec(t) {
+  if (!t) return 0;
+  const parts = String(t).split(':').map(Number);
+  if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+  if (parts.length === 2) return parts[0]*60 + parts[1];
+  return parseFloat(parts[0]) || 0;
+}
+
+function togglePlay(idx) {
+  const slide = presSlides[idx];
+  if (!slide) return;
+  const mp3Src = slide.mp3Data || '';
+  const vid = extractYtId(slide.youtubeUrl);
+
+  const startSec = parseTimeToSec(slide.start);
+  const mp3StartSec = slide.mp3FromYoutube ? 0 : startSec;
+
+  if (mp3Src) {
+    if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+    const isSameAudio = audioCurrentIdx === idx && !audioPlayer.paused;
+    if (isSameAudio) {
+      audioPlayer.pause();
+      clearTimeout(window._audioStopTimer);
+      updatePlayBtn(false);
+      return;
+    }
+    clearTimeout(window._audioStopTimer);
+    audioPlayer.pause();
+    audioPlayer = new Audio(mp3Src);
+    audioCurrentIdx = idx;
+    audioPlayer.currentTime = mp3StartSec;
+    audioPlayer.play().then(() => {
+      updatePlayBtn(true);
+      window._audioStopTimer = setTimeout(() => {
+        audioPlayer.pause();
+        updatePlayBtn(false);
+      }, (parseInt(slide.duration) || 30) * 1000);
+    }).catch(() => alert('Impossible de lire ce MP3.'));
+    audioPlayer.onended = () => updatePlayBtn(false);
+    return;
+  }
+
+  if (!vid) {
+    alert('Ajoutez un MP3 ou un lien YouTube valide pour cette chanson.');
+    return;
+  }
+
+  if (!ytReady) {
+    alert('Le lecteur YouTube se charge... réessayez dans un instant.');
+    return;
+  }
+
+  audioPlayer.pause();
+  clearTimeout(window._audioStopTimer);
+  const isPlaying = ytPlayer.getPlayerState?.() === 1;
+
+  if (isPlaying) {
+    ytPlayer.pauseVideo();
+    clearTimeout(window._ytStopTimer);
+    updatePlayBtn(false);
+  } else {
+    ytPlayer.loadVideoById({ videoId: vid, startSeconds: startSec });
+    ytPlayer.playVideo();
+    updatePlayBtn(true);
+  }
+}
+
+function updatePlayBtn(playing) {
+  const btn = document.getElementById(`pres-play-${presCurrentIdx}`);
+  if (!btn) return;
+  btn.textContent = playing ? '⏸' : '▶';
+  if (playing) btn.classList.add('playing'); else btn.classList.remove('playing');
+}
+
+function resetPresentationPlayButtons() {
+  document.querySelectorAll('.pres-play-btn').forEach(btn => {
+    btn.textContent = '▶';
+    btn.classList.remove('playing');
+  });
+}
+
+// ================================================================
+// PRESENTATION
+// ================================================================
+async function goToPresentation(mode) {
+  const rawSongs = mode === 'manual'
+    ? manualSongs.filter(s => s.selected && s.artist && s.title)
+    : autoSongs.filter(s => s.selected && s.artist && s.title);
+  const songs = rawSongs.map(s => ({
+    ...s,
+    __source: s,
+    youtubeUrl: s.youtubeUrl || s.url || '',
+    mp3Data: s.mp3Data || '',
+    mp3Name: s.mp3Name || '',
+    mp3FromYoutube: !!s.mp3FromYoutube,
+  }));
+
+  if (songs.length === 0) {
+    alert('Ajoutez au moins une chanson avec artiste et titre !');
+    return;
+  }
+
+  const theme = mode === 'manual'
+    ? document.getElementById('manual-theme').value.trim()
+    : autoConfig.theme;
+
+  presSlides = songs;
+  presCurrentIdx = 0;
+  await prepareAudioBeforePresentation(songs);
+  buildPresentation(theme, songs);
+  presNavigate._absIdx = 0;
+  document.getElementById('pres-overlay').classList.add('open');
+  presNavigate(0);
+}
+
+function buildPresentation(theme, songs) {
+  const container = document.getElementById('pres-slides-container');
+  container.innerHTML = '';
+
+  // INTRO
+  const intro = document.createElement('div');
+  intro.className = 'pres-slide pres-active';
+  intro.id = 'pres-slide--1';
+  intro.innerHTML = `
+    <div class="pres-intro-card">
+      <div style="font-family:'Press Start 2P',monospace;font-size:.65rem;letter-spacing:5px;margin-bottom:14px" class="nt-cyan">🎵 BIENVENUE AU 🎵</div>
+      <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,6vw,4.5rem);line-height:1.1;margin-bottom:8px" class="nt-yellow">${escHtml(theme.toUpperCase())}</div>
+      <div style="font-family:'Boogaloo',cursive;font-size:clamp(1.5rem,4vw,2.8rem)" class="nt-pink">BLINDTEST</div>
+      <div style="font-family:'Orbitron',sans-serif;font-size:.85rem;color:rgba(255,255,255,.35);margin:22px 0 34px;letter-spacing:1px">${songs.length} chanson${songs.length > 1 ? 's' : ''} à deviner !</div>
+      <button class="btn btn-pink btn-lg" style="animation:pulse-pink 2s infinite" onclick="presNavigate(1)">▶ DÉMARRER</button>
+    </div>`;
+  container.appendChild(intro);
+
+  // SONGS
+  songs.forEach((song, i) => {
+    const hasBonus = song.bonusEnabled !== false && song.bonus && song.bonus.trim();
+    const div = document.createElement('div');
+    div.className = 'pres-slide';
+    div.id = `pres-slide-${i}`;
+    div.innerHTML = `
+      <div class="pres-song-card">
+        <div class="pres-song-num">CHANSON ${i + 1} / ${songs.length}</div>
+        <div class="pres-artist nt-pink">${escHtml(song.artist)}</div>
+        <div class="pres-title nt-yellow">"${escHtml(song.title)}"</div>
+        ${hasBonus ? `
+          <div class="pres-bonus-box">
+            <div class="pres-bonus-lbl nt-cyan">🎯 QUESTION BONUS</div>
+            <div class="pres-bonus-q">${escHtml(song.bonus)}</div>
+            <button class="btn btn-yellow btn-sm" onclick="revealAnswer('bonus-ans-${i}',this)">RÉVÉLER LA RÉPONSE</button>
+            <div class="pres-bonus-a nt-yellow" id="bonus-ans-${i}">💡 ${escHtml(song.bonusAnswer || '—')}</div>
+          </div>` : ''}
+        <div style="display:flex;align-items:center;gap:16px;margin-top:6px">
+          <button class="pres-play-btn" id="pres-play-${i}" onclick="togglePlay(${i})">▶</button>
+          <div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.38);letter-spacing:2px">
+            ${song.mp3Data ? '🎵 EXTRAIT MP3' : (song.youtubeUrl ? '🎵 EXTRAIT YOUTUBE' : '⚠ PAS DE SOURCE AUDIO')}
+            ${song.start ? ` · Début: ${song.start}` : ''}
+            ${song.duration ? ` · ${song.duration}s` : ''}
+          </div>
+        </div>
+      </div>`;
+    container.appendChild(div);
+  });
+
+  // OUTRO
+  const outro = document.createElement('div');
+  outro.className = 'pres-slide';
+  outro.id = `pres-slide-${songs.length}`;
+  outro.innerHTML = `
+    <div class="pres-intro-card">
+      <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,5vw,3.5rem)" class="nt-cyan">FIN DU BLINDTEST</div>
+      <div style="font-family:'Boogaloo',cursive;font-size:1.8rem;margin-top:8px" class="nt-yellow">Merci d'avoir joué !</div>
+      <div style="font-size:3.5rem;margin:26px 0">🏆</div>
+      <div style="font-family:'Boogaloo',cursive;font-size:1.2rem;color:rgba(255,255,255,.45)">Thème : <strong style="color:#fff">${escHtml(theme)}</strong></div>
+      <div style="display:flex;gap:14px;justify-content:center;margin-top:28px;flex-wrap:wrap">
+        <button class="btn btn-cyan btn-md" onclick="presNavigate(-presCurrentIdx - 1)">↺ RECOMMENCER</button>
+        <button class="btn btn-yellow btn-md" onclick="openExportModal()">📄 EXPORTER HTML</button>
+        <button class="btn btn-purple btn-md" onclick="closePresentation()">✕ FERMER</button>
+      </div>
+    </div>`;
+  container.appendChild(outro);
+}
+
+function revealAnswer(id, btn) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('shown');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.4'; }
+}
+
+function presNavigate(dir) {
+  const slides = document.querySelectorAll('.pres-slide');
+  const maxIdx = slides.length - 1; // 0 = intro, 1..n = songs, n+1 = outro
+
+  // Map visual index to slide index (-1 = intro, 0..n-1 = songs, n = outro)
+  // presCurrentIdx tracks which song/special slide we're on
+  // Actually let's use absolute slide index
+  if (typeof presNavigate._absIdx === 'undefined') presNavigate._absIdx = 0;
+
+  // Stop audio on navigation
+  if (ytPlayer && ytPlayer.pauseVideo) { ytPlayer.pauseVideo(); clearTimeout(window._ytStopTimer); }
+  audioPlayer.pause();
+  clearTimeout(window._audioStopTimer);
+  audioCurrentIdx = null;
+  resetPresentationPlayButtons();
+
+  let absIdx = presNavigate._absIdx + dir;
+  absIdx = Math.max(0, Math.min(absIdx, maxIdx));
+  presNavigate._absIdx = absIdx;
+
+  slides.forEach(s => s.classList.remove('pres-active'));
+  slides[absIdx].classList.add('pres-active');
+
+  // Update play btn reference (song slides only)
+  const songIdx = absIdx - 1; // -1 means intro, maxIdx means outro
+  presCurrentIdx = songIdx;
+
+  // Counter
+  const counter = document.getElementById('pres-counter');
+  if (absIdx === 0) counter.textContent = '';
+  else if (absIdx === maxIdx) counter.textContent = '';
+  else counter.textContent = `${absIdx} / ${presSlides.length}`;
+
+  // Nav btns
+  document.getElementById('pres-prev').disabled = absIdx === 0;
+  document.getElementById('pres-next').disabled = absIdx === maxIdx;
+}
+
+function closePresentation() {
+  document.getElementById('pres-overlay').classList.remove('open');
+  if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+  clearTimeout(window._ytStopTimer);
+  audioPlayer.pause();
+  clearTimeout(window._audioStopTimer);
+  audioCurrentIdx = null;
+  presNavigate._absIdx = 0;
+}
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('pres-overlay').classList.contains('open')) return;
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); presNavigate(1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); presNavigate(-1); }
+  if (e.key === 'Escape') closePresentation();
+});
+
+// ================================================================
+// EXPORT HTML
+// ================================================================
+function openExportModal() {
+  exportHtmlContent = generateExportHTML();
+  document.getElementById('export-preview').textContent = exportHtmlContent.substring(0, 2000) + (exportHtmlContent.length > 2000 ? '\n...[tronqué pour aperçu]...' : '');
+  document.getElementById('export-modal').classList.add('open');
+}
+
+function closeExport() {
+  document.getElementById('export-modal').classList.remove('open');
+}
+
+function downloadExportHTML() {
+  const blob = new Blob([exportHtmlContent], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const theme = (autoConfig.theme || document.getElementById('manual-theme')?.value || 'blindtest').replace(/\s/g,'_');
+  a.download = `blindtest_${theme}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function copyExportHTML() {
+  navigator.clipboard.writeText(exportHtmlContent).then(() => alert('Copié dans le presse-papiers !'));
+}
+
+function generateExportHTML() {
+  const mode = currentScreen.includes('manual') || presSlides === manualSongs.filter(s=>s.selected&&s.artist&&s.title) ? 'manual' : 'auto';
+  const theme = autoConfig.theme || document.getElementById('manual-theme')?.value || 'Blindtest';
+  const songs = presSlides;
+
+  const slidesData = JSON.stringify(songs.map(s => ({
+    artist: s.artist, title: s.title,
+    youtubeUrl: s.youtubeUrl || s.url || '',
+    mp3Data: s.mp3Data || '',
+    mp3Name: s.mp3Name || '',
+    mp3FromYoutube: !!s.mp3FromYoutube,
+    start: s.start, duration: s.duration,
+    bonus: s.bonusEnabled !== false ? (s.bonus || '') : '',
+    bonusAnswer: s.bonusEnabled !== false ? (s.bonusAnswer || '') : '',
+  })));
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blindtest — ${theme}</title>
+<link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Orbitron:wght@700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{--pink:#ff2d78;--cyan:#00f5ff;--yellow:#ffe600;--purple:#b400ff;--bg:#08000f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:#fff;font-family:'Orbitron',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);pointer-events:none;z-index:9999}
+@keyframes slide-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 18px var(--pink)}50%{box-shadow:0 0 45px var(--pink),0 0 80px rgba(255,45,120,.3)}}
+@keyframes rainbow{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+.slide{display:none;flex-direction:column;align-items:center;width:90vw;max-width:860px;animation:slide-up .38s ease}
+.slide.active{display:flex}
+.card{background:linear-gradient(155deg,#130020,#09000e);border-radius:18px;padding:44px 40px;width:100%}
+.intro-card{border:2px solid var(--cyan);box-shadow:0 0 55px rgba(0,245,255,.2);text-align:center}
+.song-card{border:2px solid rgba(180,0,255,.45);box-shadow:0 0 38px rgba(180,0,255,.22);position:relative;overflow:hidden}
+.song-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pink),var(--cyan),var(--yellow),var(--purple),var(--pink));background-size:300%;animation:rainbow 4s linear infinite}
+.bonus-box{background:rgba(0,245,255,.05);border:1px solid rgba(0,245,255,.22);border-radius:10px;padding:18px;margin-bottom:22px}
+.bonus-ans{display:none;color:var(--yellow);text-shadow:0 0 8px rgba(255,230,0,.5);font-family:'Boogaloo',cursive;font-size:1.05rem;padding-top:10px;border-top:1px solid rgba(255,230,0,.25);margin-top:8px}
+.bonus-ans.shown{display:block;animation:slide-up .25s ease}
+.play-btn{width:60px;height:60px;border-radius:50%;border:2px solid var(--pink);background:rgba(255,45,120,.14);color:var(--pink);font-size:1.5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 0 18px rgba(255,45,120,.28);flex-shrink:0}
+.play-btn:hover{background:rgba(255,45,120,.28);box-shadow:0 0 32px rgba(255,45,120,.6);transform:scale(1.06)}
+.play-btn.playing{animation:pulse 1.2s infinite}
+.btn{font-family:'Press Start 2P',monospace;border-radius:8px;cursor:pointer;border:2px solid;transition:all .2s}
+.btn-p{background:rgba(255,45,120,.12);border-color:var(--pink);color:var(--pink);padding:12px 26px;font-size:.6rem;letter-spacing:2px}
+.btn-c{background:rgba(0,245,255,.08);border-color:var(--cyan);color:var(--cyan);padding:10px 22px;font-size:.55rem;letter-spacing:1px}
+.btn-y{background:rgba(255,230,0,.08);border-color:var(--yellow);color:var(--yellow);padding:8px 18px;font-size:.5rem;letter-spacing:1px}
+.btn-pu{background:rgba(180,0,255,.08);border-color:var(--purple);color:var(--purple);padding:10px 22px;font-size:.55rem;letter-spacing:1px}
+.nav-btn{width:52px;height:52px;border-radius:50%;border:2px solid var(--cyan);background:rgba(0,245,255,.08);color:var(--cyan);font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 0 14px rgba(0,245,255,.18)}
+.nav-btn:hover:not([disabled]){background:rgba(0,245,255,.22)}
+.nav-btn[disabled]{opacity:.2;cursor:not-allowed}
+.counter{position:fixed;top:18px;right:26px;font-family:'Press Start 2P',monospace;font-size:.55rem;color:rgba(255,255,255,.35);z-index:100;letter-spacing:2px}
+.vinyl{position:fixed;right:-70px;bottom:70px;width:180px;height:180px;border-radius:50%;border:2px solid rgba(180,0,255,.12);animation:spin 18s linear infinite;opacity:.22;pointer-events:none}
+#yt-wrap{position:fixed;bottom:-200px;left:-200px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
+
+/* FULLSCREEN BUTTON */
+#btn-fullscreen{position:fixed;top:14px;right:16px;z-index:30000;width:38px;height:38px;border-radius:8px;border:1px solid rgba(0,245,255,.35);background:rgba(0,245,255,.08);color:var(--cyan);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 0 10px rgba(0,245,255,.15)}
+#btn-fullscreen:hover{background:rgba(0,245,255,.22);box-shadow:0 0 18px rgba(0,245,255,.45)}
+
+/* FOOTER */
+#app-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;padding:5px;font-family:'Press Start 2P',monospace;font-size:.38rem;color:rgba(255,255,255,.75);letter-spacing:2px;z-index:100;pointer-events:none;background:linear-gradient(to top,rgba(8,0,15,.8),transparent)}
+
+/* PWA INSTALL BANNER */
+#pwa-banner{display:none;position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#13001f,#0a0012);border:1px solid rgba(0,245,255,.35);border-radius:14px;padding:14px 22px;box-shadow:0 0 30px rgba(0,245,255,.2);z-index:29000;align-items:center;gap:16px;max-width:420px;width:90vw;animation:slide-up .4s ease}
+#pwa-banner.show{display:flex}
+.pwa-icon{font-size:2rem;flex-shrink:0}
+.pwa-txt{flex:1;min-width:0}
+.pwa-txt strong{display:block;font-family:'Press Start 2P',monospace;font-size:.5rem;color:var(--cyan);letter-spacing:1px;margin-bottom:5px}
+.pwa-txt span{font-family:'Orbitron',sans-serif;font-size:.62rem;color:rgba(255,255,255,.5);line-height:1.5}
+.pwa-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+</style></head>
+<body>
+<div class="vinyl"><div style="position:absolute;inset:22%;border-radius:50%;border:1px solid rgba(0,245,255,.18)"></div><div style="position:absolute;inset:46%;border-radius:50%;background:rgba(255,45,120,.3)"></div></div>
+<div class="counter" id="ctr"></div>
+<div id="slides"></div>
+<div style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);display:flex;gap:16px;z-index:100">
+  <button class="nav-btn" id="btnP" onclick="nav(-1)">←</button>
+  <button class="nav-btn" id="btnN" onclick="nav(1)">→</button>
+</div>
+<div id="yt-wrap"><div id="ytpl"></div></div>
+<script>
+const theme=${JSON.stringify(theme)};
+const songs=${slidesData};
+let cur=0,ytpl=null,ytRdy=false,audio=new Audio(),audioIdx=null;
+function build(){
+  const c=document.getElementById('slides');
+  c.innerHTML='';
+  // intro
+  c.innerHTML+=\`<div class="slide active card intro-card" id="s-0">
+    <div style="font-family:'Press Start 2P',monospace;font-size:.65rem;letter-spacing:5px;color:#00f5ff;margin-bottom:14px">🎵 BIENVENUE AU 🎵</div>
+    <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,6vw,4.5rem);color:#ffe600;text-shadow:0 0 15px #ffe600;line-height:1.1;margin-bottom:8px">\${theme.toUpperCase()}</div>
+    <div style="font-family:'Boogaloo',cursive;font-size:clamp(1.5rem,4vw,2.8rem);color:#ff2d78;text-shadow:0 0 12px #ff2d78">BLINDTEST</div>
+    <div style="font-size:.85rem;color:rgba(255,255,255,.35);margin:22px 0 34px">\${songs.length} chanson\${songs.length>1?'s':''} à deviner !</div>
+    <button class="btn btn-p" style="animation:pulse 2s infinite" onclick="nav(1)">▶ DÉMARRER</button>
+  </div>\`;
+  songs.forEach((s,i)=>{
+    const hb=s.bonus&&s.bonus.trim();
+    c.innerHTML+=\`<div class="slide card song-card" id="s-\${i+1}">
+      <div style="font-family:'Press Start 2P',monospace;font-size:.58rem;color:#00f5ff;letter-spacing:3px;margin-bottom:18px;text-shadow:0 0 8px #00f5ff">CHANSON \${i+1} / \${songs.length}</div>
+      <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,5vw,3.5rem);color:#ff2d78;text-shadow:0 0 15px #ff2d78;line-height:1.1;margin-bottom:8px">\${s.artist}</div>
+      <div style="font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(1.1rem,2.5vw,1.9rem);color:#ffe600;text-shadow:0 0 12px #ffe600;margin-bottom:28px">"\${s.title}"</div>
+      \${hb?\`<div class="bonus-box">
+        <div style="font-family:'Press Start 2P',monospace;font-size:.48rem;color:#00f5ff;letter-spacing:2px;margin-bottom:8px">🎯 QUESTION BONUS</div>
+        <div style="font-family:'Boogaloo',cursive;font-size:1.15rem;color:#ddd;line-height:1.5;margin-bottom:10px">\${s.bonus}</div>
+        <button class="btn btn-y" onclick="reveal('ba-\${i}',this)">RÉVÉLER LA RÉPONSE</button>
+        <div class="bonus-ans" id="ba-\${i}">💡 \${s.bonusAnswer||'—'}</div>
+      </div>\`:''}
+      <div style="display:flex;align-items:center;gap:16px;margin-top:6px">
+        <button class="play-btn" id="pb-\${i}" onclick="togglePlay(\${i})">▶</button>
+        <div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.38);letter-spacing:2px">
+          \${s.mp3Data?'🎵 EXTRAIT MP3':(s.youtubeUrl?'🎵 EXTRAIT YOUTUBE':'⚠ PAS DE SOURCE AUDIO')}
+          \${s.start?' · Début: '+s.start:''}
+          \${s.duration?' · '+s.duration+'s':''}
+        </div>
+      </div>
+    </div>\`;
+  });
+  c.innerHTML+=\`<div class="slide card intro-card" id="s-\${songs.length+1}">
+    <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,5vw,3.5rem);color:#00f5ff;text-shadow:0 0 15px #00f5ff">FIN DU BLINDTEST</div>
+    <div style="font-family:'Boogaloo',cursive;font-size:1.8rem;color:#ffe600;text-shadow:0 0 12px #ffe600;margin-top:8px">Merci d'avoir joué !</div>
+    <div style="font-size:3.5rem;margin:26px 0">🏆</div>
+    <div style="font-family:'Boogaloo',cursive;font-size:1.2rem;color:rgba(255,255,255,.45)">Thème : <strong style="color:#fff">\${theme}</strong></div>
+  </div>\`;
+  updateNav();
+}
+function nav(d){
+  const all=document.querySelectorAll('.slide');
+  stopAudio();
+  all[cur].classList.remove('active');
+  cur=Math.max(0,Math.min(cur+d,all.length-1));
+  all[cur].classList.add('active');
+  updateNav();
+}
+function updateNav(){
+  const total=document.querySelectorAll('.slide').length;
+  document.getElementById('btnP').disabled=cur===0;
+  document.getElementById('btnN').disabled=cur===total-1;
+  const ctr=document.getElementById('ctr');
+  ctr.textContent=(cur>0&&cur<total-1)?\`\${cur} / \${songs.length}\`:'';
+}
+function reveal(id,btn){const el=document.getElementById(id);if(el)el.classList.add('shown');if(btn){btn.disabled=true;btn.style.opacity='.4'}}
+function stopAudio(){if(ytpl&&ytpl.pauseVideo)ytpl.pauseVideo();audio.pause();audioIdx=null;clearTimeout(window._t);clearTimeout(window._at);document.querySelectorAll('.play-btn').forEach(b=>{b.textContent='▶';b.classList.remove('playing')})}
+function togglePlay(i){
+  const s=songs[i];if(!s)return;
+  const start=(t=>{if(!t)return 0;const p=String(t).split(':').map(Number);if(p.length===2)return p[0]*60+p[1];return parseFloat(p[0])||0})(s.start);
+  const mp3Start=s.mp3FromYoutube?0:start;
+  const btn=document.getElementById('pb-'+i);
+  if(s.mp3Data){
+    if(audioIdx===i&&!audio.paused){stopAudio();return}
+    stopAudio();
+    audio=new Audio(s.mp3Data);
+    audioIdx=i;
+    audio.currentTime=mp3Start;
+    audio.play().then(()=>{
+      btn.textContent='⏸';btn.classList.add('playing');
+      window._at=setTimeout(()=>{audio.pause();btn.textContent='▶';btn.classList.remove('playing')},(parseInt(s.duration)||30)*1000);
+    }).catch(()=>alert('Impossible de lire ce MP3.'));
+    audio.onended=()=>{btn.textContent='▶';btn.classList.remove('playing')};
+    return;
+  }
+  const m=s.youtubeUrl?s.youtubeUrl.match(/(?:v=|youtu\\.be\\/|embed\\/)([a-zA-Z0-9_-]{11})/):null;
+  const vid=m?m[1]:null;
+  if(!vid){alert('Ajoutez un MP3 ou un lien YouTube valide.');return}
+  if(!ytRdy){alert('Lecteur YouTube en cours de chargement... réessayez.');return}
+  const playing=ytpl.getPlayerState&&ytpl.getPlayerState()===1;
+  if(playing){stopAudio();return}
+  stopAudio();
+  ytpl.loadVideoById({videoId:vid,startSeconds:start});
+  ytpl.playVideo();
+  btn.textContent='⏸';btn.classList.add('playing');
+  window._t=setTimeout(()=>{ytpl.pauseVideo();btn.textContent='▶';btn.classList.remove('playing');},(parseInt(s.duration)||30)*1000);
+}
+window.onYouTubeIframeAPIReady=function(){ytpl=new YT.Player('ytpl',{width:1,height:1,playerVars:{autoplay:0,controls:0},events:{onReady:()=>{ytRdy=true}}})};
+(function(){const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)})();
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();nav(1)}if(e.key==='ArrowLeft'){e.preventDefault();nav(-1)}});
+build();
+<\/script></body></html>`;
+}
+
+// Initial auto config info
+updateAutoInfo();
+
+// ================================================================
+// FULLSCREEN
+// ================================================================
+function toggleFullscreen() {
+  const btn = document.getElementById('btn-fullscreen');
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    if (btn) btn.textContent = '⛶';
+    if (btn) btn.title = 'Quitter le plein écran (Échap)';
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    if (btn) btn.textContent = '⛶';
+    if (btn) btn.title = 'Plein écran (F11)';
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('btn-fullscreen');
+  if (!btn) return;
+  if (document.fullscreenElement) {
+    btn.textContent = '✕⛶';
+    btn.style.borderColor = 'rgba(255,45,120,.5)';
+    btn.style.color = 'var(--pink)';
+  } else {
+    btn.textContent = '⛶';
+    btn.style.borderColor = 'rgba(0,245,255,.35)';
+    btn.style.color = 'var(--cyan)';
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
+});
+
+// ================================================================
+// PWA — Service Worker + Install
+// ================================================================
+let pwaInstallEvent = null;
+
+// Inject manifest dynamically
+(function() {
+  const manifest = {
+    name: 'BlindTest Studio',
+    short_name: 'BlindTest',
+    description: 'Créez et animez vos blindtests musicaux',
+    start_url: './',
+    display: 'standalone',
+    background_color: '#08000f',
+    theme_color: '#08000f',
+    orientation: 'landscape',
+    icons: [
+      {
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%2308000f'/%3E%3Ccircle cx='256' cy='256' r='200' fill='none' stroke='%23ff2d78' stroke-width='18'/%3E%3Ccircle cx='256' cy='256' r='60' fill='%23ff2d78'/%3E%3Ctext x='256' y='295' text-anchor='middle' font-family='serif' font-size='120' fill='%23ffe600'%3E♪%3C/text%3E%3C/svg%3E",
+        sizes: '512x512',
+        type: 'image/svg+xml',
+        purpose: 'any maskable'
+      }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  document.getElementById('pwa-manifest').href = url;
+})();
+
+// Register service worker (inline via blob)
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'blindtest-v1';
+    self.addEventListener('install', e => {
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e => {
+      e.waitUntil(caches.keys().then(keys =>
+        Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      ));
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(
+        caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => cached))
+      );
+    });
+  `;
+  const swBlob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
+
+// Capture install event
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  pwaInstallEvent = e;
+  // Show banner after 3s if not already installed
+  setTimeout(() => {
+    if (!window.matchMedia('(display-mode: standalone)').matches) {
+      document.getElementById('pwa-banner')?.classList.add('show');
+    }
+  }, 3000);
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('pwa-banner')?.classList.remove('show');
+  pwaInstallEvent = null;
+});
+
+function installPWA() {
+  const banner = document.getElementById('pwa-banner');
+  if (pwaInstallEvent) {
+    pwaInstallEvent.prompt();
+    pwaInstallEvent.userChoice.then(result => {
+      if (result.outcome === 'accepted') {
+        banner?.classList.remove('show');
+      }
+      pwaInstallEvent = null;
+    });
+  } else {
+    // Fallback instructions
+    banner?.classList.remove('show');
+    alert('Pour installer l\'application :\n\n📱 Mobile : Menu du navigateur → "Ajouter à l\'écran d\'accueil"\n💻 Desktop Chrome/Edge : icône ⊕ dans la barre d\'adresse → Installer');
+  }
+}
+
+function dismissPWA() {
+  document.getElementById('pwa-banner')?.classList.remove('show');
+  sessionStorage.setItem('pwa-dismissed', '1');
+}
+
+</script>
+</body>
+</html>
