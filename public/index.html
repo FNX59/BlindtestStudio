@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎵 BlindTest Studio</title>
+<!-- saved as index.html -->
 <link rel="manifest" id="pwa-manifest">
 <meta name="theme-color" content="#08000f">
 <meta name="mobile-web-app-capable" content="yes">
@@ -229,7 +230,16 @@ td{padding:5px 4px}
       <div style="font-size:.72rem;color:rgba(255,255,255,.55);line-height:1.7">Donne un thème, le LLM choisi génère les chansons, liens YouTube et questions bonus.</div>
     </div>
   </div>
-  <div style="margin-top:55px;font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.18);letter-spacing:3px">INSERT COIN TO CONTINUE</div>
+  <!-- INSTALL BUTTON (shown only when PWA installable or on mobile) -->
+  <div id="home-install-wrap" style="display:none;margin-top:36px;animation:slide-up .6s .25s ease both">
+    <div class="card" style="padding:20px 32px;text-align:center;border-color:rgba(0,255,136,.4);box-shadow:0 0 30px rgba(0,255,136,.15)">
+      <div style="font-size:1.8rem;margin-bottom:8px">📲</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:.58rem;color:var(--green);letter-spacing:2px;margin-bottom:8px;text-shadow:0 0 10px var(--green)">INSTALLER L'APPLICATION</div>
+      <div style="font-family:'Orbitron',sans-serif;font-size:.68rem;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:16px">Installez BlindTest Studio sur votre appareil<br>pour un accès rapide, même hors-ligne.</div>
+      <button class="btn btn-green btn-md" onclick="installPWA()">⬇ INSTALLER</button>
+    </div>
+  </div>
+  <div style="margin-top:24px;font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.18);letter-spacing:3px">INSERT COIN TO CONTINUE</div>
 </div>
 
 <!-- ============================================================
@@ -1923,6 +1933,19 @@ build();
 // Initial auto config info
 updateAutoInfo();
 
+// Show install option on home if standalone not active and not already installed
+(function() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+  if (!isStandalone) {
+    // For iOS Safari or fallback: always show install option
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS) {
+      document.getElementById('home-install-wrap').style.display = 'block';
+    }
+  }
+})();
+
 // ================================================================
 // FULLSCREEN
 // ================================================================
@@ -2018,16 +2041,15 @@ if ('serviceWorker' in navigator) {
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   pwaInstallEvent = e;
-  // Show banner after 3s if not already installed
-  setTimeout(() => {
-    if (!window.matchMedia('(display-mode: standalone)').matches) {
-      document.getElementById('pwa-banner')?.classList.add('show');
-    }
-  }, 3000);
+  // Show install card on home screen
+  if (!window.matchMedia('(display-mode: standalone)').matches) {
+    document.getElementById('home-install-wrap')?.style && (document.getElementById('home-install-wrap').style.display = 'block');
+  }
 });
 
 window.addEventListener('appinstalled', () => {
   document.getElementById('pwa-banner')?.classList.remove('show');
+  document.getElementById('home-install-wrap') && (document.getElementById('home-install-wrap').style.display = 'none');
   pwaInstallEvent = null;
 });
 
