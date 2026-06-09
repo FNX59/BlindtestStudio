@@ -1185,17 +1185,56 @@ function extractJsonPayload(text) {
     .trim();
   try {
     return JSON.parse(clean);
-  } catch {
+  } catch (e) {
+    // Try to extract JSON by finding matching brackets
     const startArray = clean.indexOf('[');
     const endArray = clean.lastIndexOf(']');
     if (startArray !== -1 && endArray > startArray) {
-      return JSON.parse(clean.slice(startArray, endArray + 1));
+      try {
+        return JSON.parse(clean.slice(startArray, endArray + 1));
+      } catch {}
     }
     const startObject = clean.indexOf('{');
     const endObject = clean.lastIndexOf('}');
     if (startObject !== -1 && endObject > startObject) {
-      return JSON.parse(clean.slice(startObject, endObject + 1));
+      try {
+        return JSON.parse(clean.slice(startObject, endObject + 1));
+      } catch {}
     }
+    // Try to find the first complete JSON object/array by counting brackets
+    let bracketCount = 0;
+    let inString = false;
+    let escapeNext = false;
+    let jsonStart = -1;
+    for (let i = 0; i < clean.length; i++) {
+      const char = clean[i];
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+      if (char === '"' || char === "'") {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      
+      if (char === '{' || char === '[') {
+        if (bracketCount === 0) jsonStart = i;
+        bracketCount++;
+      } else if (char === '}' || char === ']') {
+        bracketCount--;
+        if (bracketCount === 0 && jsonStart !== -1) {
+          try {
+            return JSON.parse(clean.slice(jsonStart, i + 1));
+          } catch {}
+        }
+      }
+    }
+    console.error('JSON parse error, raw response:', clean.substring(0, 500));
     throw new Error('La réponse du LLM ne contient pas de JSON valide.');
   }
 }
