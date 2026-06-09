@@ -699,14 +699,12 @@ const LLM_PROVIDERS = {
   },
   albert: {
     label: 'API Albert',
-    model: 'mistralai/Mistral-Small-3.1-24B-Instruct-2503',
+    model: 'mistralai/Mistral-Small-3.2-24B-Instruct-2506',
     models: [
-      'mistralai/Mistral-Small-3.1-24B-Instruct-2503',
-      'mistralai/Ministral-3B-Instruct-2410',
-      'AgentPublic/llama3-instruct-8b',
-      'AgentPublic/albertlight-7b',
-      'meta-llama/Meta-Llama-3.1-70B-Instruct',
-      'meta-llama/Meta-Llama-3.1-8B-Instruct'
+      'mistralai/Mistral-Small-3.2-24B-Instruct-2506',
+      'openai/gpt-oss-120b',
+      'Qwen/Qwen3-Coder-30B-A3B-Instruct',
+      'mistralai/Ministral-3-8B-Instruct-2512'
     ],
     url: 'https://albert.api.etalab.gouv.fr/v1/chat/completions',
     proxyUrl: '',
@@ -1012,7 +1010,9 @@ async function fetchLlmModels(cfg) {
     console.error('JSON parse error in fetchLlmModels, raw response:', raw);
     throw new Error(`Réponse JSON invalide du proxy (models): ${raw.substring(0, 200)}...`);
   }
+  const CHAT_TYPES = ['text-generation', 'image-text-to-text'];
   return (data.data || data.models || [])
+    .filter(m => !m.type || CHAT_TYPES.includes(m.type))
     .map(m => m.id || m.name)
     .filter(Boolean);
 }
