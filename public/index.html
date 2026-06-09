@@ -490,6 +490,61 @@ let audioCurrentIdx = null;
 const AUDIO_EXTRACT_API = localStorage.getItem('blindtestAudioExtractApi') || 'http://localhost:3478/api/extract';
 
 // ================================================================
+// WEB AUDIO — Fade in / Fade out (1.5 s)
+// ================================================================
+let _audioCtx = null;
+let _gainNode = null;
+let _audioSource = null;
+const FADE_DURATION = 1.5; // secondes
+
+function getAudioCtx() {
+  if (!_audioCtx || _audioCtx.state === 'closed') {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    _gainNode = _audioCtx.createGain();
+    _gainNode.connect(_audioCtx.destination);
+  }
+  return { ctx: _audioCtx, gain: _gainNode };
+}
+
+function connectAudioToGain(player) {
+  // Déconnecter l'ancienne source si elle existe
+  try { if (_audioSource) { _audioSource.disconnect(); _audioSource = null; } } catch(e) {}
+  const { ctx, gain } = getAudioCtx();
+  // Reprendre le contexte si suspendu (politique autoplay)
+  if (ctx.state === 'suspended') ctx.resume();
+  _audioSource = ctx.createMediaElementSource(player);
+  _audioSource.connect(gain);
+}
+
+function fadeIn(onComplete) {
+  const { ctx, gain } = getAudioCtx();
+  const now = ctx.currentTime;
+  gain.gain.cancelScheduledValues(now);
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(1, now + FADE_DURATION);
+  if (onComplete) setTimeout(onComplete, FADE_DURATION * 1000);
+}
+
+function fadeOut(onComplete) {
+  const { ctx, gain } = getAudioCtx();
+  const now = ctx.currentTime;
+  gain.gain.cancelScheduledValues(now);
+  gain.gain.setValueAtTime(gain.gain.value, now);
+  gain.gain.linearRampToValueAtTime(0, now + FADE_DURATION);
+  if (onComplete) setTimeout(onComplete, FADE_DURATION * 1000);
+}
+
+function stopAudioWithFade(cb) {
+  clearTimeout(window._audioStopTimer);
+  clearTimeout(window._audioFadeOutTimer);
+  fadeOut(() => {
+    audioPlayer.pause();
+    updatePlayBtn(false);
+    if (cb) cb();
+  });
+}
+
+// ================================================================
 // NAVIGATION
 // ================================================================
 function showScreen(id) {
@@ -1635,25 +1690,35 @@ function togglePlay(idx) {
     if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
     const isSameAudio = audioCurrentIdx === idx && !audioPlayer.paused;
     if (isSameAudio) {
-      audioPlayer.pause();
-      clearTimeout(window._audioStopTimer);
-      updatePlayBtn(false);
+      // Fade out puis pause
+      stopAudioWithFade();
       return;
     }
+    // Arrêter proprement l'audio précédent (fade out immédiat si en cours)
     clearTimeout(window._audioStopTimer);
+    clearTimeout(window._audioFadeOutTimer);
+    try { if (_gainNode) { _gainNode.gain.cancelScheduledValues(0); _gainNode.gain.setValueAtTime(0, 0); } } catch(e) {}
     audioPlayer.pause();
+
     audioPlayer = new Audio(mp3Src);
     audioCurrentIdx = idx;
+
+    const durMs = (parseInt(slide.duration) || 30) * 1000;
+    const fadeMs = FADE_DURATION * 1000;
+
     const setStartAndPlay = () => {
       try { audioPlayer.currentTime = mp3StartSec; } catch(e) {}
+      connectAudioToGain(audioPlayer);
       audioPlayer.play().then(() => {
         updatePlayBtn(true);
-        window._audioStopTimer = setTimeout(() => {
-          audioPlayer.pause();
-          updatePlayBtn(false);
-        }, (parseInt(slide.duration) || 30) * 1000);
+        fadeIn(); // fondu d'entrée 1,5 s
+        // Planifier le fade out avant la fin de la durée
+        const fadeOutAt = Math.max(0, durMs - fadeMs);
+        window._audioFadeOutTimer = setTimeout(() => {
+          stopAudioWithFade();
+        }, fadeOutAt);
       }).catch(() => alert('Impossible de lire ce MP3.'));
-      audioPlayer.onended = () => updatePlayBtn(false);
+      audioPlayer.onended = () => { updatePlayBtn(false); };
     };
     if (mp3StartSec > 0) {
       audioPlayer.addEventListener('loadedmetadata', setStartAndPlay, { once: true });
@@ -1819,10 +1884,15 @@ function presNavigate(dir) {
   // Actually let's use absolute slide index
   if (typeof presNavigate._absIdx === 'undefined') presNavigate._absIdx = 0;
 
-  // Stop audio on navigation
+  // Stop audio on navigation (fade out immédiat si en cours)
   if (ytPlayer && ytPlayer.pauseVideo) { ytPlayer.pauseVideo(); clearTimeout(window._ytStopTimer); }
-  audioPlayer.pause();
   clearTimeout(window._audioStopTimer);
+  clearTimeout(window._audioFadeOutTimer);
+  if (!audioPlayer.paused) {
+    stopAudioWithFade();
+  } else {
+    audioPlayer.pause();
+  }
   audioCurrentIdx = null;
   resetPresentationPlayButtons();
 
@@ -1852,8 +1922,13 @@ function closePresentation() {
   document.getElementById('pres-overlay').classList.remove('open');
   if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
   clearTimeout(window._ytStopTimer);
-  audioPlayer.pause();
   clearTimeout(window._audioStopTimer);
+  clearTimeout(window._audioFadeOutTimer);
+  if (!audioPlayer.paused) {
+    stopAudioWithFade();
+  } else {
+    audioPlayer.pause();
+  }
   audioCurrentIdx = null;
   presNavigate._absIdx = 0;
 }
