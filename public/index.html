@@ -845,6 +845,7 @@ function saveLlmSettings() {
 
 async function readErrorMessage(res, providerLabel) {
   const raw = await res.text();
+  console.error('Error response from API:', raw);
   try {
     const err = JSON.parse(raw);
     return err.error?.message || err.message || `${providerLabel} ${res.status}`;
@@ -860,6 +861,12 @@ function explainNetworkError(error, cfg) {
       return 'Le navigateur ne peut pas joindre Albert directement (CORS). Vérifiez l’URL du worker n8n, la clé Albert, et que le worker est bien actif.';
     }
     return 'Erreur réseau. Vérifiez la connexion, l’URL API et les autorisations CORS du fournisseur.';
+  }
+  if (/json.*parse|json.*invalid/i.test(msg)) {
+    if (cfg?.id === 'albert') {
+      return 'Le worker n8n retourne une réponse invalide. Vérifiez que l’URL du worker est correcte et que le worker est actif. URL par défaut: https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy';
+    }
+    return 'Réponse JSON invalide. Vérifiez la configuration du proxy.';
   }
   return msg;
 }
@@ -996,7 +1003,14 @@ async function fetchLlmModels(cfg) {
 
   const res = await llmFetch(cfg, modelsUrl, { headers });
   if (!res.ok) throw new Error(await readErrorMessage(res, cfg.label));
-  const data = await res.json();
+  const raw = await res.text();
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    console.error('JSON parse error in fetchLlmModels, raw response:', raw);
+    throw new Error(`Réponse JSON invalide du proxy (models): ${raw.substring(0, 200)}...`);
+  }
   return (data.data || data.models || [])
     .map(m => m.id || m.name)
     .filter(Boolean);
