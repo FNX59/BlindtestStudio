@@ -2,6 +2,8 @@
 
 Application éducative de création de blindtests avec génération LLM, préparation audio locale et présentation autonome.
 
+**Version : 1.0.2**
+
 ## Fonctionnalités
 
 - Création de blindtests interactifs

@@ -2,6 +2,11 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [1.0.2] - 2025-06-09
+
+### Modifications
+- Mise à jour de index.html
+
 ## [Unreleased]
 ### Ajouts
 - Ajout de la fonctionnalité de recherche de chansons
