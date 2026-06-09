@@ -570,15 +570,15 @@ function renderManualTable() {
     const tr = document.createElement('tr');
     tr.style.background = row.selected ? 'rgba(0,245,255,.02)' : 'transparent';
     tr.innerHTML = `
-      <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected ? 'checked' : ''} onchange="updateManualRow(${i},'selected',this.checked)"></td>
+      <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected ? 'checked' : ''} data-idx="${i}" data-field="selected" onchange="updateManualRow(parseInt(this.dataset.idx),'selected',this.checked)"></td>
       ${['artist','title'].map(f => `
-        <td><input class="cell-inp" value="${escHtml(row[f])}" placeholder="${f==='start'?'0:30':f==='duration'?'30':'...'}" onchange="updateManualRow(${i},'${f}',this.value)"></td>
+        <td><input class="cell-inp" value="${escHtml(row[f])}" placeholder="${f==='start'?'0:30':f==='duration'?'30':'...'}" data-idx="${i}" data-field="${f}" onchange="updateManualRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
       `).join('')}
       ${buildMp3Cell('manual', i, row)}
       ${['url','start','duration','bonus','bonusAnswer'].map(f => `
-        <td><input class="cell-inp" value="${escHtml(row[f])}" placeholder="${f==='start'?'0:30':f==='duration'?'30':'...'}" onchange="updateManualRow(${i},'${f}',this.value)"></td>
+        <td><input class="cell-inp" value="${escHtml(row[f])}" placeholder="${f==='start'?'0:30':f==='duration'?'30':'...'}" data-idx="${i}" data-field="${f}" onchange="updateManualRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
       `).join('')}
-      <td><button class="del-btn" onclick="deleteManualRow(${i})">✕</button></td>
+      <td><button class="del-btn" data-idx="${i}" onclick="deleteManualRow(parseInt(this.dataset.idx))">✕</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -675,8 +675,8 @@ const LLM_PROVIDERS = {
   },
   claude: {
     label: 'Claude AI',
-    model: 'claude-3-5-haiku-latest',
-    models: ['claude-3-5-haiku-latest', 'claude-3-5-sonnet-latest', 'claude-3-7-sonnet-latest'],
+    model: 'claude-haiku-4-5',
+    models: ['claude-haiku-4-5', 'claude-sonnet-4-5', 'claude-opus-4-5'],
     url: 'https://api.anthropic.com/v1/messages',
     mode: 'anthropic',
     help: 'Utilise l’API Anthropic Messages avec en-tête x-api-key.'
@@ -1235,25 +1235,25 @@ function buildAutoRow(row) {
   const i = row._i;
   const bonusEnabled = row.bonusEnabled !== false;
   const bonusCells = `
-    <td style="text-align:center"><input type="checkbox" class="check-cb" ${bonusEnabled?'checked':''} onchange="updateAutoRow(${i},'bonusEnabled',this.checked)"></td>
-    <td><input class="cell-inp" value="${escHtml(row.bonus)}" ${bonusEnabled?'':'disabled'} onchange="updateAutoRow(${i},'bonus',this.value)"></td>
-    <td><input class="cell-inp" value="${escHtml(row.bonusAnswer)}" ${bonusEnabled?'':'disabled'} onchange="updateAutoRow(${i},'bonusAnswer',this.value)"></td>`;
+    <td style="text-align:center"><input type="checkbox" class="check-cb" ${bonusEnabled?'checked':''} data-idx="${i}" data-field="bonusEnabled" onchange="updateAutoRow(parseInt(this.dataset.idx),'bonusEnabled',this.checked)"></td>
+    <td><input class="cell-inp" value="${escHtml(row.bonus)}" ${bonusEnabled?'':'disabled'} data-idx="${i}" data-field="bonus" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
+    <td><input class="cell-inp" value="${escHtml(row.bonusAnswer)}" ${bonusEnabled?'':'disabled'} data-idx="${i}" data-field="bonusAnswer" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>`;
   const justif = row.justification || '';
   return `<tr style="border-bottom:1px solid rgba(255,255,255,.03)">
-    <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected?'checked':''} onchange="updateAutoRow(${i},'selected',this.checked)"></td>
+    <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected?'checked':''} data-idx="${i}" data-field="selected" onchange="updateAutoRow(parseInt(this.dataset.idx),'selected',this.checked)"></td>
     ${['artist','title'].map(f =>
-      `<td><input class="cell-inp" value="${escHtml(row[f])}" onchange="updateAutoRow(${i},'${f}',this.value)"></td>`
+      `<td><input class="cell-inp" value="${escHtml(row[f])}" data-idx="${i}" data-field="${f}" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>`
     ).join('')}
     <td>
       <div style="font-family:'Orbitron',sans-serif;font-size:.56rem;color:rgba(255,255,255,.9);line-height:1.5;padding:5px 6px;background:rgba(180,0,255,.06);border-radius:5px;border-left:2px solid rgba(180,0,255,.4);min-height:28px;font-style:italic">${escHtml(justif) || '<span style="opacity:.3">—</span>'}</div>
     </td>
     ${buildMp3Cell('auto', i, row)}
     ${['youtubeUrl','start','duration'].map(f =>
-      `<td><input class="cell-inp" value="${escHtml(row[f])}" onchange="updateAutoRow(${i},'${f}',this.value)"></td>`
+      `<td><input class="cell-inp" value="${escHtml(row[f])}" data-idx="${i}" data-field="${f}" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>`
     ).join('')}
     ${bonusCells}
-    <td><button class="revoke-btn" id="revoke-${i}" onclick="revokeSong(${i})" title="Remplacer avec le LLM choisi">🔄</button></td>
-    <td><button class="del-btn" onclick="deleteAutoRow(${i})">✕</button></td>
+    <td><button class="revoke-btn" id="revoke-${i}" data-idx="${i}" onclick="revokeSong(parseInt(this.dataset.idx))" title="Remplacer avec le LLM choisi">🔄</button></td>
+    <td><button class="del-btn" data-idx="${i}" onclick="deleteAutoRow(parseInt(this.dataset.idx))">✕</button></td>
   </tr>`;
 }
 
@@ -1545,15 +1545,23 @@ function togglePlay(idx) {
     audioPlayer.pause();
     audioPlayer = new Audio(mp3Src);
     audioCurrentIdx = idx;
-    audioPlayer.currentTime = mp3StartSec;
-    audioPlayer.play().then(() => {
-      updatePlayBtn(true);
-      window._audioStopTimer = setTimeout(() => {
-        audioPlayer.pause();
-        updatePlayBtn(false);
-      }, (parseInt(slide.duration) || 30) * 1000);
-    }).catch(() => alert('Impossible de lire ce MP3.'));
-    audioPlayer.onended = () => updatePlayBtn(false);
+    const setStartAndPlay = () => {
+      try { audioPlayer.currentTime = mp3StartSec; } catch(e) {}
+      audioPlayer.play().then(() => {
+        updatePlayBtn(true);
+        window._audioStopTimer = setTimeout(() => {
+          audioPlayer.pause();
+          updatePlayBtn(false);
+        }, (parseInt(slide.duration) || 30) * 1000);
+      }).catch(() => alert('Impossible de lire ce MP3.'));
+      audioPlayer.onended = () => updatePlayBtn(false);
+    };
+    if (mp3StartSec > 0) {
+      audioPlayer.addEventListener('loadedmetadata', setStartAndPlay, { once: true });
+      audioPlayer.load();
+    } else {
+      setStartAndPlay();
+    }
     return;
   }
 
@@ -1689,7 +1697,7 @@ function buildPresentation(theme, songs) {
       <div style="font-size:3.5rem;margin:26px 0">🏆</div>
       <div style="font-family:'Boogaloo',cursive;font-size:1.2rem;color:rgba(255,255,255,.45)">Thème : <strong style="color:#fff">${escHtml(theme)}</strong></div>
       <div style="display:flex;gap:14px;justify-content:center;margin-top:28px;flex-wrap:wrap">
-        <button class="btn btn-cyan btn-md" onclick="presNavigate(-presCurrentIdx - 1)">↺ RECOMMENCER</button>
+        <button class="btn btn-cyan btn-md" onclick="presNavigate._absIdx=0;presNavigate(0)">↺ RECOMMENCER</button>
         <button class="btn btn-yellow btn-md" onclick="openExportModal()">📄 EXPORTER HTML</button>
         <button class="btn btn-purple btn-md" onclick="closePresentation()">✕ FERMER</button>
       </div>
@@ -1787,7 +1795,7 @@ function copyExportHTML() {
 }
 
 function generateExportHTML() {
-  const mode = currentScreen.includes('manual') || presSlides === manualSongs.filter(s=>s.selected&&s.artist&&s.title) ? 'manual' : 'auto';
+  const mode = currentScreen.includes('manual') ? 'manual' : 'auto';
   const theme = autoConfig.theme || document.getElementById('manual-theme')?.value || 'Blindtest';
   const songs = presSlides;
 
@@ -1937,12 +1945,15 @@ function togglePlay(i){
     stopAudio();
     audio=new Audio(s.mp3Data);
     audioIdx=i;
-    audio.currentTime=mp3Start;
-    audio.play().then(()=>{
-      btn.textContent='⏸';btn.classList.add('playing');
-      window._at=setTimeout(()=>{audio.pause();btn.textContent='▶';btn.classList.remove('playing')},(parseInt(s.duration)||30)*1000);
-    }).catch(()=>alert('Impossible de lire ce MP3.'));
-    audio.onended=()=>{btn.textContent='▶';btn.classList.remove('playing')};
+    const doPlay=()=>{
+      try{audio.currentTime=mp3Start;}catch(e){}
+      audio.play().then(()=>{
+        btn.textContent='⏸';btn.classList.add('playing');
+        window._at=setTimeout(()=>{audio.pause();btn.textContent='▶';btn.classList.remove('playing')},(parseInt(s.duration)||30)*1000);
+      }).catch(()=>alert('Impossible de lire ce MP3.'));
+      audio.onended=()=>{btn.textContent='▶';btn.classList.remove('playing')};
+    };
+    if(mp3Start>0){audio.addEventListener('loadedmetadata',doPlay,{once:true});audio.load();}else{doPlay();}
     return;
   }
   const m=s.youtubeUrl?s.youtubeUrl.match(/(?:v=|youtu\\.be\\/|embed\\/)([a-zA-Z0-9_-]{11})/):null;
