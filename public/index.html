@@ -709,9 +709,9 @@ const LLM_PROVIDERS = {
       'meta-llama/Meta-Llama-3.1-8B-Instruct'
     ],
     url: 'https://albert.api.etalab.gouv.fr/v1/chat/completions',
-    proxyUrl: 'https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy',
+    proxyUrl: '',
     mode: 'openai',
-    help: 'API Albert (IA souveraine française, DINUM). Les appels transitent via le worker n8n pour contourner le blocage CORS du navigateur.'
+    help: 'API Albert (IA souveraine française, DINUM). OBLIGATOIRE: configurez l’URL de votre worker n8n ci-dessous pour contourner CORS. Sans worker, l’API Albert ne fonctionnera pas.'
   },
   custom: {
     label: 'LLM personnalisé',
@@ -832,6 +832,7 @@ function updateLlmFields() {
 
 function saveLlmSettings() {
   const cfg = getLlmConfig();
+  if (cfg.id === 'albert' && !cfg.proxyUrl) { setLlmStatus('Pour Albert, l’URL du worker n8n est OBLIGATOIRE. Configurez-la avant d’enregistrer.', 'error'); return; }
   if (!cfg.apiKey && !(cfg.id === 'albert' && cfg.proxyUrl)) { setLlmStatus(`Saisissez une clé API ${cfg.label} avant d’enregistrer.`, 'error'); return; }
   if (cfg.id === 'custom' && !cfg.url) { setLlmStatus('Saisissez une URL API pour ce fournisseur personnalisé.', 'error'); return; }
   localStorage.setItem(LLM_STORAGE_PREFIX + cfg.id, JSON.stringify({
@@ -1082,6 +1083,7 @@ async function testLlmConnection() {
   const saved = getSavedLlmSettings(currentCfg.id);
   const cfg = { ...currentCfg, model: saved.model || currentCfg.model || getDefaultModel(currentCfg.id) };
   const btn = document.getElementById('auto-test-btn');
+  if (cfg.id === 'albert' && !cfg.proxyUrl) { setLlmStatus('Pour Albert, l’URL du worker n8n est OBLIGATOIRE. Configurez-la dans le champ "URL Worker n8n".', 'error'); return; }
   if (!cfg.apiKey && !(cfg.id === 'albert' && cfg.proxyUrl)) { setLlmStatus(`Saisissez une clé API ${cfg.label} avant de tester.`, 'error'); return; }
   if (!cfg.model) { setLlmStatus('Aucun modèle de test n’est défini pour ce fournisseur.', 'error'); return; }
   if (!cfg.url) { setLlmStatus('Saisissez une URL API avant de tester.', 'error'); return; }
@@ -1117,10 +1119,10 @@ async function generatePlaylist() {
   const spr = parseInt(document.getElementById('auto-spr').value) || 5;
   const duration = parseInt(document.getElementById('auto-duration').value) || 30;
   const bonus = document.getElementById('auto-bonus').checked;
-
   const errEl = document.getElementById('auto-cfg-err');
   errEl.style.display = 'none';
 
+  if (llmCfg.id === 'albert' && !llmCfg.proxyUrl) { showErr('Pour Albert, l’URL du worker n8n est OBLIGATOIRE. Configurez-la dans le champ "URL Worker n8n".'); return; }
   if (!llmCfg.apiKey && !(llmCfg.id === 'albert' && llmCfg.proxyUrl)) { showErr(`Veuillez saisir votre clé API ${llmCfg.label} !`); return; }
   if (!llmModelAccess[llmCfg.id] || document.getElementById('auto-model').disabled) { showErr('Veuillez tester la connexion avant de choisir le modèle et générer la playlist.'); return; }
   if (!llmCfg.model) { showErr('Veuillez saisir le modèle à utiliser !'); return; }
