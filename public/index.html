@@ -363,7 +363,7 @@ td{padding:5px 4px}
           <button class="btn btn-cyan btn-sm" id="auto-test-btn" onclick="testLlmConnection()">TESTER</button>
           <button class="btn btn-green btn-sm" id="auto-save-key-btn" onclick="saveLlmSettings()">ENREGISTRER</button>
         </div>
-        <div id="auto-provider-help" style="font-size:.62rem;color:rgba(255,230,0,.45);margin-top:6px;font-family:'Orbitron',sans-serif">API Albert sélectionné par défaut. Les appels transitent via le worker n8n. Renseignez l’URL du worker ci-dessus.</div>
+        <div id="auto-provider-help" style="font-size:.62rem;color:rgba(255,230,0,.45);margin-top:6px;font-family:'Orbitron',sans-serif">API Albert sélectionné par défaut. Les appels transitent via le worker n8n. Renseignez l'URL du worker ci-dessus.</div>
         <div id="auto-llm-status" style="display:none;margin-top:9px;font-size:.64rem;line-height:1.45;font-family:'Orbitron',sans-serif"></div>
       </div>
       <div style="margin-bottom:16px">
@@ -663,7 +663,7 @@ const LLM_PROVIDERS = {
     models: ['mistral-small-latest', 'mistral-medium-latest', 'mistral-large-latest', 'codestral-latest'],
     url: 'https://api.mistral.ai/v1/chat/completions',
     mode: 'openai',
-    help: 'Utilise l’API Mistral avec authentification Bearer.'
+    help: "Utilise l'API Mistral avec authentification Bearer."
   },
   perplexity: {
     label: 'Perplexity',
@@ -671,15 +671,15 @@ const LLM_PROVIDERS = {
     models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro', 'sonar-deep-research'],
     url: 'https://api.perplexity.ai/chat/completions',
     mode: 'openai',
-    help: 'Utilise l’API Perplexity Chat Completions avec authentification Bearer.'
+    help: "Utilise l'API Perplexity Chat Completions avec authentification Bearer."
   },
   claude: {
     label: 'Claude AI',
-    model: 'claude-haiku-4-5',
-    models: ['claude-haiku-4-5', 'claude-sonnet-4-5', 'claude-opus-4-5'],
+    model: 'claude-haiku-4-5-20251001',
+    models: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-6'],
     url: 'https://api.anthropic.com/v1/messages',
     mode: 'anthropic',
-    help: 'Utilise l’API Anthropic Messages avec en-tête x-api-key.'
+    help: "Utilise l'API Anthropic Messages avec en-tête x-api-key."
   },
   gemini: {
     label: 'Gemini',
@@ -695,13 +695,13 @@ const LLM_PROVIDERS = {
     models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'],
     url: 'https://api.openai.com/v1/chat/completions',
     mode: 'openai',
-    help: 'Utilise l’API OpenAI Chat Completions avec authentification Bearer.'
+    help: "Utilise l'API OpenAI Chat Completions avec authentification Bearer."
   },
   albert: {
     label: 'API Albert',
-    model: 'mistralai/Mistral-Small-3.2-24B-Instruct-2506',
+    model: 'mistralai/Mistral-Small-3.1-24B-Instruct-2503',
     models: [
-      'mistralai/Mistral-Small-3.2-24B-Instruct-2506',
+      'mistralai/Mistral-Small-3.1-24B-Instruct-2503',
       'mistralai/Ministral-3B-Instruct-2410',
       'AgentPublic/llama3-instruct-8b',
       'AgentPublic/albertlight-7b',
@@ -711,7 +711,7 @@ const LLM_PROVIDERS = {
     url: 'https://albert.api.etalab.gouv.fr/v1/chat/completions',
     proxyUrl: '',
     mode: 'openai',
-    help: 'API Albert (IA souveraine française, DINUM). OBLIGATOIRE: configurez l’URL de votre worker n8n ci-dessous pour contourner CORS. Sans worker, l’API Albert ne fonctionnera pas.'
+    help: "API Albert (IA souveraine française, DINUM). OBLIGATOIRE: configurez l'URL de votre worker n8n ci-dessous pour contourner CORS. Sans worker, l'API Albert ne fonctionnera pas."
   },
   custom: {
     label: 'LLM personnalisé',
@@ -720,7 +720,7 @@ const LLM_PROVIDERS = {
     url: '',
     proxyUrl: '',
     mode: 'openai',
-    help: 'Utilisez une API compatible OpenAI. Renseignez l’URL complète de chat completions.'
+    help: "Utilisez une API compatible OpenAI. Renseignez l'URL complète de chat completions."
   }
 };
 
@@ -832,8 +832,8 @@ function updateLlmFields() {
 
 function saveLlmSettings() {
   const cfg = getLlmConfig();
-  if (cfg.id === 'albert' && !cfg.proxyUrl) { setLlmStatus('Pour Albert, l’URL du worker n8n est OBLIGATOIRE. Configurez-la avant d’enregistrer.', 'error'); return; }
-  if (!cfg.apiKey && !(cfg.id === 'albert' && cfg.proxyUrl)) { setLlmStatus(`Saisissez une clé API ${cfg.label} avant d’enregistrer.`, 'error'); return; }
+  if (cfg.id === 'albert' && !cfg.proxyUrl) { setLlmStatus("Pour Albert, l'URL du worker n8n est OBLIGATOIRE. Configurez-la avant d'enregistrer.", 'error'); return; }
+  if (!cfg.apiKey && !(cfg.id === 'albert' && cfg.proxyUrl)) { setLlmStatus(`Saisissez une clé API ${cfg.label} avant d'enregistrer.`, 'error'); return; }
   if (cfg.id === 'custom' && !cfg.url) { setLlmStatus('Saisissez une URL API pour ce fournisseur personnalisé.', 'error'); return; }
   localStorage.setItem(LLM_STORAGE_PREFIX + cfg.id, JSON.stringify({
     apiKey: cfg.apiKey,
@@ -859,13 +859,13 @@ function explainNetworkError(error, cfg) {
   const msg = error?.message || String(error || '');
   if (/networkerror|failed to fetch|load failed|fetch resource/i.test(msg)) {
     if (cfg?.id === 'albert') {
-      return 'Le navigateur ne peut pas joindre Albert directement (CORS). Vérifiez l’URL du worker n8n, la clé Albert, et que le worker est bien actif.';
+      return "Le navigateur ne peut pas joindre Albert directement (CORS). Vérifiez l'URL du worker n8n, la clé Albert, et que le worker est bien actif.";
     }
-    return 'Erreur réseau. Vérifiez la connexion, l’URL API et les autorisations CORS du fournisseur.';
+    return "Erreur réseau. Vérifiez la connexion, l'URL API et les autorisations CORS du fournisseur.";
   }
   if (/json.*parse|json.*invalid/i.test(msg)) {
     if (cfg?.id === 'albert') {
-      return 'Le worker n8n retourne une réponse invalide. Vérifiez que l’URL du worker est correcte et que le worker est actif. URL par défaut: https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy';
+      return "Le worker n8n retourne une réponse invalide. Vérifiez que l'URL du worker est correcte et que le worker est actif. URL par défaut: https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy";
     }
     return 'Réponse JSON invalide. Vérifiez la configuration du proxy.';
   }
@@ -1061,9 +1061,9 @@ function buildThemeRules(theme) {
   const t = String(theme || '').toLowerCase();
   const rules = [
     `- Respecte TOUS les qualificatifs du thème "${theme}" : genre, pays/zone, langue, période, décennie, ambiance.`,
-    '- Ne remplace jamais une contrainte géographique par une scène équivalente d’un autre pays.',
+    "- Ne remplace jamais une contrainte géographique par une scène équivalente d'un autre pays.",
     '- Si le thème contient une décennie, chaque titre doit être sorti pendant cette décennie, pas seulement dans un style proche.',
-    '- Si un morceau ne respecte pas une contrainte explicite du thème, exclue-le même s’il est célèbre.'
+    "- Si un morceau ne respecte pas une contrainte explicite du thème, exclue-le même s'il est célèbre."
   ];
   if (/\b(us|usa|u\.s\.|u\.s\.a\.|united states|états-unis|etats-unis|américain|americaine|américaine|american)\b/i.test(theme)) {
     rules.push('- CONTRAINTE US OBLIGATOIRE : tous les artistes/groupes doivent venir des États-Unis. Exclure rap français, belge, canadien, britannique ou autre pays.');
@@ -1083,9 +1083,9 @@ async function testLlmConnection() {
   const saved = getSavedLlmSettings(currentCfg.id);
   const cfg = { ...currentCfg, model: saved.model || currentCfg.model || getDefaultModel(currentCfg.id) };
   const btn = document.getElementById('auto-test-btn');
-  if (cfg.id === 'albert' && !cfg.proxyUrl) { setLlmStatus('Pour Albert, l’URL du worker n8n est OBLIGATOIRE. Configurez-la dans le champ "URL Worker n8n".', 'error'); return; }
+  if (cfg.id === 'albert' && !cfg.proxyUrl) { setLlmStatus("Pour Albert, l'URL du worker n8n est OBLIGATOIRE. Configurez-la dans le champ 'URL Worker n8n'.", 'error'); return; }
   if (!cfg.apiKey && !(cfg.id === 'albert' && cfg.proxyUrl)) { setLlmStatus(`Saisissez une clé API ${cfg.label} avant de tester.`, 'error'); return; }
-  if (!cfg.model) { setLlmStatus('Aucun modèle de test n’est défini pour ce fournisseur.', 'error'); return; }
+  if (!cfg.model) { setLlmStatus("Aucun modèle de test n'est défini pour ce fournisseur.", 'error'); return; }
   if (!cfg.url) { setLlmStatus('Saisissez une URL API avant de tester.', 'error'); return; }
 
   try {
@@ -1094,7 +1094,7 @@ async function testLlmConnection() {
     const text = await callLlm('Réponds uniquement avec le mot OK.', cfg);
     if (!String(text || '').trim()) throw new Error('réponse vide');
     let models = [];
-    let modelSource = 'découverts via l’API';
+    let modelSource = "découverts via l'API";
     try {
       models = await fetchLlmModels(cfg);
     } catch (modelErr) {
@@ -1122,11 +1122,11 @@ async function generatePlaylist() {
   const errEl = document.getElementById('auto-cfg-err');
   errEl.style.display = 'none';
 
-  if (llmCfg.id === 'albert' && !llmCfg.proxyUrl) { showErr('Pour Albert, l’URL du worker n8n est OBLIGATOIRE. Configurez-la dans le champ "URL Worker n8n".'); return; }
+  if (llmCfg.id === 'albert' && !llmCfg.proxyUrl) { showErr("Pour Albert, l'URL du worker n8n est OBLIGATOIRE. Configurez-la dans le champ 'URL Worker n8n'."); return; }
   if (!llmCfg.apiKey && !(llmCfg.id === 'albert' && llmCfg.proxyUrl)) { showErr(`Veuillez saisir votre clé API ${llmCfg.label} !`); return; }
   if (!llmModelAccess[llmCfg.id] || document.getElementById('auto-model').disabled) { showErr('Veuillez tester la connexion avant de choisir le modèle et générer la playlist.'); return; }
   if (!llmCfg.model) { showErr('Veuillez saisir le modèle à utiliser !'); return; }
-  if (!llmCfg.url) { showErr('Veuillez saisir l’URL API à utiliser !'); return; }
+  if (!llmCfg.url) { showErr("Veuillez saisir l'URL API à utiliser !"); return; }
   if (!theme) { showErr('Veuillez saisir un thème !'); return; }
 
   const btn = document.getElementById('auto-gen-btn');
@@ -1169,7 +1169,7 @@ Génère exactement ${total} objets.`;
     renderAutoTable();
     showScreen('screen-auto-table');
   } catch (e) {
-    showErr(`Erreur ${llmCfg.label} : ${explainNetworkError(e, llmCfg)}. Vérifiez la clé API, le modèle et l’URL.`);
+    showErr(`Erreur ${llmCfg.label} : ${explainNetworkError(e, llmCfg)}. Vérifiez la clé API, le modèle et l'URL.`);
   } finally {
     btn.disabled = false;
     btn.textContent = '🤖 GÉNÉRER LA PLAYLIST →';
@@ -1318,7 +1318,7 @@ Chansons déjà dans la liste (à exclure absolument) : ${existing}
 
 RÈGLES :
 - La chanson proposée doit respecter toutes les contraintes du thème.
-- Si le thème impose US/USA/États-Unis, l’artiste doit venir des États-Unis.
+- Si le thème impose US/USA/États-Unis, l'artiste doit venir des États-Unis.
 - Si le thème impose une décennie, le titre doit être sorti pendant cette décennie.
 
 Réponds UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) :
