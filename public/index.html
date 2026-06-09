@@ -1313,45 +1313,51 @@ async function generatePlaylist() {
 
   const btn = document.getElementById('auto-gen-btn');
   btn.disabled = true;
-  btn.textContent = '⏳ GÉNÉRATION EN COURS...';
-
+  
   const total = rounds * spr;
   const bonusLine = bonus ? `- Pour chaque chanson, propose une question bonus (anecdote ou fait intéressant) et sa réponse.` : `- Les champs "bonus" et "bonusAnswer" doivent être des chaînes vides "".`;
   const themeRules = buildThemeRules(theme);
+  
+  let allParsed = [];
 
-  const prompt = `Tu es un expert en musique. Génère une playlist de ${total} chansons pour un blindtest musical sur le thème : "${theme}".
+  try {
+    for (let currentRound = 1; currentRound <= rounds; currentRound++) {
+      btn.textContent = `⏳ GÉNÉRATION MANCHE ${currentRound}/${rounds}...`;
+      const prompt = `Tu es un expert en musique. Génère les ${spr} chansons de la MANCHE ${currentRound} sur ${rounds} pour un blindtest musical sur le thème : "${theme}".
 
 CONTRAINTES DU THÈME :
 ${themeRules}
 
 RÈGLES :
 - Chansons variées et emblématiques du thème
-- Aucun doublon
+- Aucun doublon (ne propose pas d'artistes déjà utilisés si possible)
 - Chaque objet doit respecter exactement les contraintes du thème
 - Timing de début entre 0:20 et 1:30 (évite les longues intros)
 - Durée de l'extrait : ${duration} secondes
 ${bonusLine}
-- Répartis les ${total} chansons en ${rounds} manches de ${spr} chansons (champ "manche" : 1 à ${rounds})
+- Assigne la valeur exacte ${currentRound} au champ "manche".
 - Pour "youtubeUrl" : utilise de vrais liens YouTube connus. Si incertain, utilise https://www.youtube.com/results?search_query=ARTISTE+TITRE
 - Avant de répondre, vérifie mentalement chaque chanson : artiste, pays/scène, décennie, genre et adéquation au thème.
 - Pour le champ "justification" : explique en 1-2 phrases pourquoi cette chanson correspond au thème "${theme}" (décennie, genre, artiste emblématique, popularité...).
 
 Réponds UNIQUEMENT avec un tableau JSON valide, sans markdown, sans backticks, sans commentaires :
-[{"artist":"...","title":"...","youtubeUrl":"https://...","start":"0:45","duration":${duration},"bonus":"...","bonusAnswer":"...","justification":"...","manche":1}]
+[{"artist":"...","title":"...","youtubeUrl":"https://...","start":"0:45","duration":${duration},"bonus":"...","bonusAnswer":"...","justification":"...","manche":${currentRound}}]
 
-Génère exactement ${total} objets.`;
+Génère exactement ${spr} objets.`;
 
-  try {
-    const text = await callLlm(prompt, llmCfg);
-    const parsed = extractJsonPayload(text);
-    if (!Array.isArray(parsed)) throw new Error('Le JSON reçu doit être un tableau de chansons.');
-    autoSongs = parsed.map(s => ({ ...s, id: Date.now() + Math.random(), selected: true, bonusEnabled: !!bonus, mp3Data: '', mp3Name: '' }));
+      const text = await callLlm(prompt, llmCfg);
+      const parsed = extractJsonPayload(text);
+      if (!Array.isArray(parsed)) throw new Error('Le JSON reçu doit être un tableau de chansons.');
+      allParsed = allParsed.concat(parsed);
+    }
+    
+    autoSongs = allParsed.map(s => ({ ...s, id: Date.now() + Math.random(), selected: true, bonusEnabled: !!bonus, mp3Data: '', mp3Name: '' }));
     autoConfig = { theme, rounds, spr, duration, bonus, llm: llmCfg };
     document.getElementById('auto-table-title').textContent = '🎵 ' + theme;
     renderAutoTable();
     showScreen('screen-auto-table');
   } catch (e) {
-    showErr(`Erreur ${llmCfg.label} : ${explainNetworkError(e, llmCfg)}. Vérifiez la clé API, le modèle et l'URL.`);
+    showErr(`Erreur ${llmCfg.label} (Manche en cours) : ${explainNetworkError(e, llmCfg)}. Vérifiez la clé API, le modèle et l'URL. (Total généré: ${allParsed.length}/${total})`);
   } finally {
     btn.disabled = false;
     btn.textContent = '🤖 GÉNÉRER LA PLAYLIST →';
