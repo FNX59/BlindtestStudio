@@ -575,7 +575,12 @@ function renderManualTable() {
         <td><input class="cell-inp" value="${escHtml(row[f])}" placeholder="${f==='start'?'0:30':f==='duration'?'30':'...'}" data-idx="${i}" data-field="${f}" onchange="updateManualRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
       `).join('')}
       ${buildMp3Cell('manual', i, row)}
-      ${['url','start','duration','bonus','bonusAnswer'].map(f => `
+      <td style="position:relative">
+        <input class="cell-inp" id="manual-url-${i}" value="${escHtml(row.url)}" placeholder="https://youtu.be/..." data-idx="${i}" data-field="url"
+          onchange="updateManualRow(parseInt(this.dataset.idx),'url',this.value);onYoutubeUrlChange('manual',parseInt(this.dataset.idx),this.value)">
+        <span id="manual-url-spin-${i}" style="display:none;position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:.7rem;animation:spin .75s linear infinite;color:var(--cyan)">⟳</span>
+      </td>
+      ${['start','duration','bonus','bonusAnswer'].map(f => `
         <td><input class="cell-inp" value="${escHtml(row[f])}" placeholder="${f==='start'?'0:30':f==='duration'?'30':'...'}" data-idx="${i}" data-field="${f}" onchange="updateManualRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
       `).join('')}
       <td><button class="del-btn" data-idx="${i}" onclick="deleteManualRow(parseInt(this.dataset.idx))">✕</button></td>
@@ -588,6 +593,89 @@ function renderManualTable() {
 function updateManualRow(i, field, val) {
   manualSongs[i][field] = (field === 'selected') ? val : val;
   if (field === 'selected') updateManualCount();
+}
+
+// ----------------------------------------------------------------
+// AUTO-FILL depuis YouTube URL (modes manual + auto)
+// ----------------------------------------------------------------
+async function fetchYoutubeTitle(url) {
+  try {
+    const oembed = 'https://www.youtube.com/oembed?url=' + encodeURIComponent(url) + '&format=json';
+    const res = await fetch(oembed);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.title || null;
+  } catch { return null; }
+}
+
+function parseArtistTitle(raw) {
+  if (!raw) return { artist: '', title: '' };
+  const sep = raw.match(/^(.+?)\s[-\u2013\u2014]\s(.+)$/);
+  if (sep) return { artist: sep[1].trim(), title: sep[2].trim() };
+  return { artist: '', title: raw.trim() };
+}
+
+function getActiveLlmConfig() {
+  if (autoConfig && autoConfig.llm && (autoConfig.llm.apiKey || autoConfig.llm.id === 'albert')) {
+    return autoConfig.llm;
+  }
+  try {
+    const cfg = getLlmConfig();
+    if (cfg.apiKey || cfg.id === 'albert') return cfg;
+  } catch {}
+  return null;
+}
+
+async function onYoutubeUrlChange(mode, i, url) {
+  url = (url || '').trim();
+  if (!url || !extractYoutubeId(url)) return;
+  const songs = getSongCollection(mode);
+  if (!songs[i]) return;
+  const row = songs[i];
+  const spinEl = document.getElementById(mode + '-url-spin-' + i);
+  if (spinEl) spinEl.style.display = 'inline-block';
+  try {
+    const ytTitle = await fetchYoutubeTitle(url);
+    let artist = row.artist || '';
+    let title = row.title || '';
+    if (ytTitle && (!artist || !title)) {
+      const parsed = parseArtistTitle(ytTitle);
+      if (!artist && parsed.artist) artist = parsed.artist;
+      if (!title) title = parsed.title || ytTitle;
+    }
+    if (artist && !songs[i].artist) {
+      songs[i].artist = artist;
+      const el = document.querySelector('[data-idx="' + i + '"][data-field="artist"]');
+      if (el) { el.value = artist; el.style.borderColor = 'var(--green)'; setTimeout(() => { el.style.borderColor = ''; }, 1800); }
+    }
+    if (title && !songs[i].title) {
+      songs[i].title = title;
+      const el = document.querySelector('[data-idx="' + i + '"][data-field="title"]');
+      if (el) { el.value = title; el.style.borderColor = 'var(--green)'; setTimeout(() => { el.style.borderColor = ''; }, 1800); }
+    }
+    const hasBonusAlready = songs[i].bonus && songs[i].bonus.trim();
+    const usedArtist = songs[i].artist;
+    const usedTitle = songs[i].title;
+    if (!hasBonusAlready && usedArtist && usedTitle) {
+      const llmCfg = getActiveLlmConfig();
+      if (llmCfg) {
+        const bonusPrompt = 'Tu es un expert en musique. Pour la chanson "' + usedArtist + ' - ' + usedTitle + '", génère UNE question bonus courte et intéressante (anecdote, fait musical, histoire de la chanson, etc.) et sa réponse.\nRéponds UNIQUEMENT avec un objet JSON sans markdown ni backticks :\n{"bonus":"La question bonus ici ?","bonusAnswer":"La réponse ici"}';
+        try {
+          const llmText = await callLlm(bonusPrompt, llmCfg);
+          const parsed = extractJsonPayload(llmText);
+          if (parsed && parsed.bonus) {
+            songs[i].bonus = parsed.bonus;
+            songs[i].bonusAnswer = parsed.bonusAnswer || '';
+            const bEl = document.querySelector('[data-idx="' + i + '"][data-field="bonus"]');
+            const baEl = document.querySelector('[data-idx="' + i + '"][data-field="bonusAnswer"]');
+            if (bEl) { bEl.value = parsed.bonus; bEl.style.borderColor = 'var(--cyan)'; setTimeout(() => { bEl.style.borderColor = ''; }, 2200); }
+            if (baEl) { baEl.value = parsed.bonusAnswer || ''; baEl.style.borderColor = 'var(--cyan)'; setTimeout(() => { baEl.style.borderColor = ''; }, 2200); }
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+  if (spinEl) spinEl.style.display = 'none';
 }
 
 function updateManualCount() {
@@ -1248,7 +1336,12 @@ function buildAutoRow(row) {
       <div style="font-family:'Orbitron',sans-serif;font-size:.56rem;color:rgba(255,255,255,.9);line-height:1.5;padding:5px 6px;background:rgba(180,0,255,.06);border-radius:5px;border-left:2px solid rgba(180,0,255,.4);min-height:28px;font-style:italic">${escHtml(justif) || '<span style="opacity:.3">—</span>'}</div>
     </td>
     ${buildMp3Cell('auto', i, row)}
-    ${['youtubeUrl','start','duration'].map(f =>
+    <td style="position:relative">
+      <input class="cell-inp" id="auto-url-${i}" value="${escHtml(row.youtubeUrl)}" data-idx="${i}" data-field="youtubeUrl"
+        onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value);onYoutubeUrlChange('auto',parseInt(this.dataset.idx),this.value)">
+      <span id="auto-url-spin-${i}" style="display:none;position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:.7rem;animation:spin .75s linear infinite;color:var(--cyan)">⟳</span>
+    </td>
+    ${['start','duration'].map(f =>
       `<td><input class="cell-inp" value="${escHtml(row[f])}" data-idx="${i}" data-field="${f}" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>`
     ).join('')}
     ${bonusCells}
@@ -1440,12 +1533,9 @@ async function prepareAudioBeforePresentation(songs) {
   setPrepProgress(0, songs.length);
   modal?.classList.add('open');
 
-  const needsYoutube = songs.some(s => !s.mp3Data && canDownloadAudio(s));
-  if (needsYoutube) {
-    addPrepLine('▶', `Connexion au service local audio : ${AUDIO_EXTRACT_API}`, 'var(--yellow)');
-    addPrepLine('▶', 'Si le service local est absent, le lecteur YouTube intégré prendra le relais.', 'var(--yellow)');
-    const ready = await waitForYTReady();
-    addPrepLine(ready ? '✓' : '!', ready ? 'Lecteur YouTube prêt.' : 'Lecteur YouTube encore en chargement, la lecture pourra nécessiter un second essai.', ready ? 'var(--green)' : 'var(--yellow)');
+  const needsDownload = songs.some(s => !s.mp3Data && canDownloadAudio(s));
+  if (needsDownload) {
+    addPrepLine('▶', `Service audio : ${AUDIO_EXTRACT_API}`, 'var(--cyan)');
   }
 
   let done = 0;
@@ -1456,7 +1546,7 @@ async function prepareAudioBeforePresentation(songs) {
       const ok = await preloadMp3(song.mp3Data, song.mp3FromYoutube ? 0 : parseTimeToSec(song.start));
       addPrepLine(ok ? '✓' : '!', ok ? `MP3 prêt : ${label}` : `MP3 non préchargé, tentative de lecture directe : ${label}`, ok ? 'var(--green)' : 'var(--yellow)');
     } else if (canDownloadAudio(song)) {
-      addPrepLine('…', `Téléchargement de l'extrait YouTube : ${label}`, 'var(--cyan)');
+      addPrepLine('…', `Extraction MP3 : ${label}`, 'var(--cyan)');
       try {
         const clip = await downloadYoutubeClip(song);
         song.mp3Data = clip.dataUrl;
@@ -1469,7 +1559,8 @@ async function prepareAudioBeforePresentation(songs) {
         }
         addPrepLine('✓', `Extrait MP3 intégré : ${label}`, 'var(--green)');
       } catch (error) {
-        addPrepLine('!', `Téléchargement impossible, fallback YouTube : ${label} (${error.message})`, 'var(--yellow)');
+        addPrepLine('✕', `Service audio indisponible pour : ${label} — ${error.message}`, '#ff5555');
+        song._audioError = true;
       }
     } else {
       addPrepLine('!', `Aucune source audio : ${label}`, '#ff5555');
@@ -1480,6 +1571,14 @@ async function prepareAudioBeforePresentation(songs) {
   }
 
   await wait(450);
+
+  const audioErrors = songs.filter(s => s._audioError);
+  if (audioErrors.length > 0) {
+    addPrepLine('✕', `${audioErrors.length} chanson(s) sans audio. Vérifiez que le service localhost:3478 est démarré.`, '#ff5555');
+    addPrepLine('▶', 'La présentation continuera mais ces chansons seront muettes. Démarrez le service et relancez.', 'rgba(255,255,255,.45)');
+  }
+
+  await wait(audioErrors.length > 0 ? 2000 : 0);
   modal?.classList.remove('open');
 }
 
