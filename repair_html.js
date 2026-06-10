@@ -67,7 +67,7 @@ async function repairHtml() {
 
   if (modified) {
     const newSongsJson = JSON.stringify(songs);
-    html = html.replace(songsRegex, `const songs=${newSongsJson};`);
+    html = html.replace(songsRegex, () => `const songs=${newSongsJson};`);
     
     fs.writeFileSync(htmlPath, html, 'utf8');
     console.log("\n🎉 Fichier HTML réparé avec succès ! Les extraits MP3 y sont maintenant intégrés.");
