@@ -1516,6 +1516,9 @@ document.addEventListener('keydown', e => {
 // EXPORT HTML
 // ================================================================
 function openExportModal() {
+  if (presSlides.some(s => !s.mp3Data)) {
+    alert("⚠ Attention : certaines chansons n'ont pas d'extrait MP3 intégré.\nL'export nécessitera une connexion internet pour lire la source YouTube de ces morceaux.");
+  }
   exportHtmlContent = generateExportHTML();
   document.getElementById('export-preview').textContent = exportHtmlContent.substring(0, 2000) + (exportHtmlContent.length > 2000 ? '\n...[tronqué pour aperçu]...' : '');
   document.getElementById('export-modal').classList.add('open');
@@ -1892,4 +1895,3 @@ function dismissPWA() {
   document.getElementById('pwa-banner')?.classList.remove('show');
   sessionStorage.setItem('pwa-dismissed', '1');
 }
-
