@@ -1,0 +1,6 @@
+﻿@echo off
+chcp 65001 >nul
+echo Lancement du serveur d'extraction audio en arriere-plan...
+start "Serveur Extraction Audio BlindTest" /MIN cmd /c "node public\audio-extract-server.js"
+echo Ouverture de BlindTest Studio...
+start public\index.html
