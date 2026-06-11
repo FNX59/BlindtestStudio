@@ -264,6 +264,10 @@ td{padding:5px 4px}
         <label class="lbl">Nombre de chansons</label>
         <input class="inp" id="manual-count" type="number" value="10" min="1" max="50">
       </div>
+      <div style="margin-bottom:24px;display:flex;align-items:center;gap:12px">
+        <input type="checkbox" id="manual-show-answers" checked style="accent-color:var(--cyan);width:17px;height:17px;cursor:pointer">
+        <label for="manual-show-answers" style="font-family:'Press Start 2P',monospace;font-size:.5rem;color:var(--cyan);cursor:pointer;letter-spacing:1px;text-shadow:0 0 8px var(--cyan)">Afficher artiste et titre au départ</label>
+      </div>
       <button class="btn btn-cyan btn-lg" style="width:100%" onclick="initManualTable()">CRÉER LE TABLEAU →</button>
     </div>
   </div>
@@ -382,6 +386,10 @@ td{padding:5px 4px}
         <input type="checkbox" id="auto-bonus" checked style="accent-color:var(--pink);width:17px;height:17px;cursor:pointer">
         <label for="auto-bonus" style="font-family:'Press Start 2P',monospace;font-size:.5rem;color:var(--pink);cursor:pointer;letter-spacing:1px;text-shadow:0 0 8px var(--pink)">Questions bonus activées</label>
       </div>
+      <div style="margin-bottom:24px;display:flex;align-items:center;gap:12px">
+        <input type="checkbox" id="auto-show-answers" checked style="accent-color:var(--cyan);width:17px;height:17px;cursor:pointer">
+        <label for="auto-show-answers" style="font-family:'Press Start 2P',monospace;font-size:.5rem;color:var(--cyan);cursor:pointer;letter-spacing:1px;text-shadow:0 0 8px var(--cyan)">Afficher artiste et titre au départ</label>
+      </div>
       <div id="auto-cfg-info" style="padding:11px;background:rgba(0,245,255,.05);border-radius:8px;margin-bottom:22px;font-family:'VT323',monospace;font-size:1.15rem;color:var(--cyan);text-align:center;letter-spacing:2px">▶ 15 CHANSONS (3 manches × 5)</div>
       <div id="auto-cfg-err" style="display:none;background:rgba(255,50,50,.1);border:1px solid rgba(255,50,50,.35);border-radius:8px;padding:11px;margin-bottom:14px;font-size:.68rem;color:#ff5555;line-height:1.55"></div>
       <button class="btn btn-pink btn-lg" style="width:100%" id="auto-gen-btn" onclick="generatePlaylist()">🤖 GÉNÉRER LA PLAYLIST →</button>
@@ -482,6 +490,8 @@ let autoSongs = [];
 let autoConfig = {};
 let presSlides = [];
 let presCurrentIdx = 0;
+let answersVisible = true;
+let answerVisibility = [];
 let ytPlayer = null;
 let ytReady = false;
 let exportHtmlContent = '';
@@ -1301,6 +1311,7 @@ async function generatePlaylist() {
   const spr = parseInt(document.getElementById('auto-spr').value) || 5;
   const duration = parseInt(document.getElementById('auto-duration').value) || 30;
   const bonus = document.getElementById('auto-bonus').checked;
+  const showAnswers = getShowAnswersSetting('auto');
   const errEl = document.getElementById('auto-cfg-err');
   errEl.style.display = 'none';
 
@@ -1352,7 +1363,7 @@ Génère exactement ${spr} objets.`;
     }
     
     autoSongs = allParsed.map(s => ({ ...s, id: Date.now() + Math.random(), selected: true, bonusEnabled: !!bonus, mp3Data: '', mp3Name: '' }));
-    autoConfig = { theme, rounds, spr, duration, bonus, llm: llmCfg };
+    autoConfig = { theme, rounds, spr, duration, bonus, showAnswers, llm: llmCfg };
     document.getElementById('auto-table-title').textContent = '🎵 ' + theme;
     renderAutoTable();
     showScreen('screen-auto-table');
@@ -1816,6 +1827,59 @@ function resetPresentationPlayButtons() {
 // ================================================================
 // PRESENTATION
 // ================================================================
+function getShowAnswersSetting(mode) {
+  const id = mode === 'manual' ? 'manual-show-answers' : 'auto-show-answers';
+  const cb = document.getElementById(id);
+  return !cb || cb.checked;
+}
+
+function renderAnswerBlock(song, i, prefix = 'pres') {
+  const visible = answerVisibility[i] !== false;
+  if (visible) {
+    return `
+        <div class="${prefix}-artist nt-pink">${escHtml(song.artist)}</div>
+        <div class="${prefix}-title nt-yellow">"${escHtml(song.title)}"</div>`;
+  }
+  return `
+        <div class="${prefix}-artist nt-pink" style="opacity:.55">ARTISTE MASQUÉ</div>
+        <div class="${prefix}-title nt-yellow" style="opacity:.55">TITRE MASQUÉ</div>`;
+}
+
+function updateAnswerVisibility() {
+  const btn = document.getElementById('pres-answer-toggle');
+  if (btn) btn.textContent = answersVisible ? '🙈 CACHER ARTISTE / TITRE' : '👁 RÉVÉLER ARTISTE / TITRE';
+  document.querySelectorAll('[data-answer-idx]').forEach(el => {
+    const idx = parseInt(el.dataset.answerIdx, 10);
+    const song = presSlides[idx];
+    if (!song) return;
+    const visible = answerVisibility[idx] !== false;
+    const artistEl = el.querySelector('.pres-artist');
+    const titleEl = el.querySelector('.pres-title');
+    const itemBtn = el.querySelector('[data-answer-toggle-idx]');
+    if (artistEl) {
+      artistEl.textContent = visible ? song.artist : 'ARTISTE MASQUÉ';
+      artistEl.style.opacity = visible ? '' : '.55';
+    }
+    if (titleEl) {
+      titleEl.textContent = visible ? `"${song.title}"` : 'TITRE MASQUÉ';
+      titleEl.style.opacity = visible ? '' : '.55';
+    }
+    if (itemBtn) itemBtn.textContent = visible ? '🙈 CACHER ARTISTE / TITRE' : '👁 RÉVÉLER ARTISTE / TITRE';
+  });
+}
+
+function toggleAnswersVisible() {
+  answersVisible = !answersVisible;
+  answerVisibility = presSlides.map(() => answersVisible);
+  updateAnswerVisibility();
+}
+
+function toggleSingleAnswer(idx) {
+  if (!presSlides[idx]) return;
+  answerVisibility[idx] = !(answerVisibility[idx] !== false);
+  updateAnswerVisibility();
+}
+
 async function goToPresentation(mode) {
   const rawSongs = mode === 'manual'
     ? manualSongs.filter(s => s.selected && s.artist && s.title)
@@ -1839,6 +1903,8 @@ async function goToPresentation(mode) {
     : autoConfig.theme;
 
   presSlides = songs;
+  answersVisible = getShowAnswersSetting(mode);
+  answerVisibility = songs.map(() => answersVisible);
   presCurrentIdx = 0;
   await prepareAudioBeforePresentation(songs);
   buildPresentation(theme, songs);
@@ -1861,7 +1927,10 @@ function buildPresentation(theme, songs) {
       <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,6vw,4.5rem);line-height:1.1;margin-bottom:8px" class="nt-yellow">${escHtml(theme.toUpperCase())}</div>
       <div style="font-family:'Boogaloo',cursive;font-size:clamp(1.5rem,4vw,2.8rem)" class="nt-pink">BLINDTEST</div>
       <div style="font-family:'Orbitron',sans-serif;font-size:.85rem;color:rgba(255,255,255,.35);margin:22px 0 34px;letter-spacing:1px">${songs.length} chanson${songs.length > 1 ? 's' : ''} à deviner !</div>
-      <button class="btn btn-pink btn-lg" style="animation:pulse-pink 2s infinite" onclick="presNavigate(1)">▶ DÉMARRER</button>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-cyan btn-md" id="pres-answer-toggle" onclick="toggleAnswersVisible()">👁 RÉVÉLER ARTISTE / TITRE</button>
+        <button class="btn btn-pink btn-lg" style="animation:pulse-pink 2s infinite" onclick="presNavigate(1)">▶ DÉMARRER</button>
+      </div>
     </div>`;
   container.appendChild(intro);
 
@@ -1872,10 +1941,10 @@ function buildPresentation(theme, songs) {
     div.className = 'pres-slide';
     div.id = `pres-slide-${i}`;
     div.innerHTML = `
-      <div class="pres-song-card">
+      <div class="pres-song-card" data-answer-idx="${i}">
         <div class="pres-song-num">CHANSON ${i + 1} / ${songs.length}</div>
-        <div class="pres-artist nt-pink">${escHtml(song.artist)}</div>
-        <div class="pres-title nt-yellow">"${escHtml(song.title)}"</div>
+        ${renderAnswerBlock(song, i)}
+        <button class="btn btn-cyan btn-sm" style="margin:0 0 20px" data-answer-toggle-idx="${i}" onclick="toggleSingleAnswer(${i})">👁 / 🙈 ARTISTE-TITRE</button>
         ${hasBonus ? `
           <div class="pres-bonus-box">
             <div class="pres-bonus-lbl nt-cyan">🎯 QUESTION BONUS</div>
@@ -1912,6 +1981,7 @@ function buildPresentation(theme, songs) {
       </div>
     </div>`;
   container.appendChild(outro);
+  updateAnswerVisibility();
 }
 
 function revealAnswer(id, btn) {
@@ -1991,6 +2061,10 @@ document.addEventListener('keydown', e => {
 // ================================================================
 function openExportModal() {
   exportHtmlContent = generateExportHTML();
+  const missingMp3 = presSlides.filter(s => !s.mp3Data).length;
+  if (missingMp3) {
+    alert(`${missingMp3} chanson(s) n'ont pas de MP3 intégré. L'export restera autonome et hors réseau, mais ces extraits ne seront pas lisibles.`);
+  }
   document.getElementById('export-preview').textContent = exportHtmlContent.substring(0, 2000) + (exportHtmlContent.length > 2000 ? '\n...[tronqué pour aperçu]...' : '');
   document.getElementById('export-modal').classList.add('open');
 }
@@ -2017,10 +2091,10 @@ function generateExportHTML() {
   const mode = currentScreen.includes('manual') ? 'manual' : 'auto';
   const theme = autoConfig.theme || document.getElementById('manual-theme')?.value || 'Blindtest';
   const songs = presSlides;
+  const exportedAnswersVisible = getShowAnswersSetting(mode);
 
   const slidesData = JSON.stringify(songs.map(s => ({
     artist: s.artist, title: s.title,
-    youtubeUrl: s.youtubeUrl || s.url || '',
     mp3Data: s.mp3Data || '',
     mp3Name: s.mp3Name || '',
     mp3FromYoutube: !!s.mp3FromYoutube,
@@ -2033,11 +2107,10 @@ function generateExportHTML() {
 <html lang="fr"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Blindtest — ${theme}</title>
-<link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Orbitron:wght@700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 :root{--pink:#ff2d78;--cyan:#00f5ff;--yellow:#ffe600;--purple:#b400ff;--bg:#08000f}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:#fff;font-family:'Orbitron',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
+body{background:var(--bg);color:#fff;font-family:Impact,'Arial Black',system-ui,sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
 body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);pointer-events:none;z-index:9999}
 @keyframes slide-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
@@ -2050,12 +2123,12 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .song-card{border:2px solid rgba(180,0,255,.45);box-shadow:0 0 38px rgba(180,0,255,.22);position:relative;overflow:hidden}
 .song-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pink),var(--cyan),var(--yellow),var(--purple),var(--pink));background-size:300%;animation:rainbow 4s linear infinite}
 .bonus-box{background:rgba(0,245,255,.05);border:1px solid rgba(0,245,255,.22);border-radius:10px;padding:18px;margin-bottom:22px}
-.bonus-ans{display:none;color:var(--yellow);text-shadow:0 0 8px rgba(255,230,0,.5);font-family:'Boogaloo',cursive;font-size:1.05rem;padding-top:10px;border-top:1px solid rgba(255,230,0,.25);margin-top:8px}
+.bonus-ans{display:none;color:var(--yellow);text-shadow:0 0 8px rgba(255,230,0,.5);font-family:'Trebuchet MS',system-ui,sans-serif;font-size:1.05rem;padding-top:10px;border-top:1px solid rgba(255,230,0,.25);margin-top:8px}
 .bonus-ans.shown{display:block;animation:slide-up .25s ease}
 .play-btn{width:60px;height:60px;border-radius:50%;border:2px solid var(--pink);background:rgba(255,45,120,.14);color:var(--pink);font-size:1.5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 0 18px rgba(255,45,120,.28);flex-shrink:0}
 .play-btn:hover{background:rgba(255,45,120,.28);box-shadow:0 0 32px rgba(255,45,120,.6);transform:scale(1.06)}
 .play-btn.playing{animation:pulse 1.2s infinite}
-.btn{font-family:'Press Start 2P',monospace;border-radius:8px;cursor:pointer;border:2px solid;transition:all .2s}
+.btn{font-family:'Courier New',monospace;font-weight:700;border-radius:8px;cursor:pointer;border:2px solid;transition:all .2s}
 .btn-p{background:rgba(255,45,120,.12);border-color:var(--pink);color:var(--pink);padding:12px 26px;font-size:.6rem;letter-spacing:2px}
 .btn-c{background:rgba(0,245,255,.08);border-color:var(--cyan);color:var(--cyan);padding:10px 22px;font-size:.55rem;letter-spacing:1px}
 .btn-y{background:rgba(255,230,0,.08);border-color:var(--yellow);color:var(--yellow);padding:8px 18px;font-size:.5rem;letter-spacing:1px}
@@ -2063,24 +2136,23 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .nav-btn{width:52px;height:52px;border-radius:50%;border:2px solid var(--cyan);background:rgba(0,245,255,.08);color:var(--cyan);font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 0 14px rgba(0,245,255,.18)}
 .nav-btn:hover:not([disabled]){background:rgba(0,245,255,.22)}
 .nav-btn[disabled]{opacity:.2;cursor:not-allowed}
-.counter{position:fixed;top:18px;right:26px;font-family:'Press Start 2P',monospace;font-size:.55rem;color:rgba(255,255,255,.35);z-index:100;letter-spacing:2px}
+.counter{position:fixed;top:18px;right:26px;font-family:'Courier New',monospace;font-weight:700;font-size:.55rem;color:rgba(255,255,255,.35);z-index:100;letter-spacing:2px}
 .vinyl{position:fixed;right:-70px;bottom:70px;width:180px;height:180px;border-radius:50%;border:2px solid rgba(180,0,255,.12);animation:spin 18s linear infinite;opacity:.22;pointer-events:none}
-#yt-wrap{position:fixed;bottom:-200px;left:-200px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
 
 /* FULLSCREEN BUTTON */
 #btn-fullscreen{position:fixed;top:14px;right:16px;z-index:30000;width:38px;height:38px;border-radius:8px;border:1px solid rgba(0,245,255,.35);background:rgba(0,245,255,.08);color:var(--cyan);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 0 10px rgba(0,245,255,.15)}
 #btn-fullscreen:hover{background:rgba(0,245,255,.22);box-shadow:0 0 18px rgba(0,245,255,.45)}
 
 /* FOOTER */
-#app-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;padding:5px;font-family:'Press Start 2P',monospace;font-size:.38rem;color:rgba(255,255,255,.75);letter-spacing:2px;z-index:100;pointer-events:none;background:linear-gradient(to top,rgba(8,0,15,.8),transparent)}
+#app-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;padding:5px;font-family:'Courier New',monospace;font-weight:700;font-size:.38rem;color:rgba(255,255,255,.75);letter-spacing:2px;z-index:100;pointer-events:none;background:linear-gradient(to top,rgba(8,0,15,.8),transparent)}
 
 /* PWA INSTALL BANNER */
 #pwa-banner{display:none;position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#13001f,#0a0012);border:1px solid rgba(0,245,255,.35);border-radius:14px;padding:14px 22px;box-shadow:0 0 30px rgba(0,245,255,.2);z-index:29000;align-items:center;gap:16px;max-width:420px;width:90vw;animation:slide-up .4s ease}
 #pwa-banner.show{display:flex}
 .pwa-icon{font-size:2rem;flex-shrink:0}
 .pwa-txt{flex:1;min-width:0}
-.pwa-txt strong{display:block;font-family:'Press Start 2P',monospace;font-size:.5rem;color:var(--cyan);letter-spacing:1px;margin-bottom:5px}
-.pwa-txt span{font-family:'Orbitron',sans-serif;font-size:.62rem;color:rgba(255,255,255,.5);line-height:1.5}
+.pwa-txt strong{display:block;font-family:'Courier New',monospace;font-weight:700;font-size:.5rem;color:var(--cyan);letter-spacing:1px;margin-bottom:5px}
+.pwa-txt span{font-family:Impact,'Arial Black',system-ui,sans-serif;font-size:.62rem;color:rgba(255,255,255,.5);line-height:1.5}
 .pwa-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
 </style></head>
 <body>
@@ -2091,38 +2163,41 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
   <button class="nav-btn" id="btnP" onclick="nav(-1)">←</button>
   <button class="nav-btn" id="btnN" onclick="nav(1)">→</button>
 </div>
-<div id="yt-wrap"><div id="ytpl"></div></div>
 <script>
 const theme=${JSON.stringify(theme)};
 const songs=${slidesData};
-let cur=0,ytpl=null,ytRdy=false,audio=new Audio(),audioIdx=null;
+let cur=0,audio=new Audio(),audioIdx=null,answersVisible=${JSON.stringify(exportedAnswersVisible)},answerVisibility=songs.map(()=>answersVisible);
 function build(){
   const c=document.getElementById('slides');
   c.innerHTML='';
   // intro
   c.innerHTML+=\`<div class="slide active card intro-card" id="s-0">
-    <div style="font-family:'Press Start 2P',monospace;font-size:.65rem;letter-spacing:5px;color:#00f5ff;margin-bottom:14px">🎵 BIENVENUE AU 🎵</div>
-    <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,6vw,4.5rem);color:#ffe600;text-shadow:0 0 15px #ffe600;line-height:1.1;margin-bottom:8px">\${theme.toUpperCase()}</div>
-    <div style="font-family:'Boogaloo',cursive;font-size:clamp(1.5rem,4vw,2.8rem);color:#ff2d78;text-shadow:0 0 12px #ff2d78">BLINDTEST</div>
+    <div style="font-family:'Courier New',monospace;font-weight:700;font-size:.65rem;letter-spacing:5px;color:#00f5ff;margin-bottom:14px">🎵 BIENVENUE AU 🎵</div>
+    <div style="font-family:'Trebuchet MS',system-ui,sans-serif;font-weight:700;font-size:clamp(2rem,6vw,4.5rem);color:#ffe600;text-shadow:0 0 15px #ffe600;line-height:1.1;margin-bottom:8px">\${theme.toUpperCase()}</div>
+    <div style="font-family:'Trebuchet MS',system-ui,sans-serif;font-weight:700;font-size:clamp(1.5rem,4vw,2.8rem);color:#ff2d78;text-shadow:0 0 12px #ff2d78">BLINDTEST</div>
     <div style="font-size:.85rem;color:rgba(255,255,255,.35);margin:22px 0 34px">\${songs.length} chanson\${songs.length>1?'s':''} à deviner !</div>
-    <button class="btn btn-p" style="animation:pulse 2s infinite" onclick="nav(1)">▶ DÉMARRER</button>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-c" id="answerToggle" onclick="toggleAnswersVisible()">👁 RÉVÉLER ARTISTE / TITRE</button>
+      <button class="btn btn-p" style="animation:pulse 2s infinite" onclick="nav(1)">▶ DÉMARRER</button>
+    </div>
   </div>\`;
   songs.forEach((s,i)=>{
     const hb=s.bonus&&s.bonus.trim();
-    c.innerHTML+=\`<div class="slide card song-card" id="s-\${i+1}">
-      <div style="font-family:'Press Start 2P',monospace;font-size:.58rem;color:#00f5ff;letter-spacing:3px;margin-bottom:18px;text-shadow:0 0 8px #00f5ff">CHANSON \${i+1} / \${songs.length}</div>
-      <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,5vw,3.5rem);color:#ff2d78;text-shadow:0 0 15px #ff2d78;line-height:1.1;margin-bottom:8px">\${s.artist}</div>
-      <div style="font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(1.1rem,2.5vw,1.9rem);color:#ffe600;text-shadow:0 0 12px #ffe600;margin-bottom:28px">"\${s.title}"</div>
+    c.innerHTML+=\`<div class="slide card song-card" id="s-\${i+1}" data-answer-idx="\${i}">
+      <div style="font-family:'Courier New',monospace;font-weight:700;font-size:.58rem;color:#00f5ff;letter-spacing:3px;margin-bottom:18px;text-shadow:0 0 8px #00f5ff">CHANSON \${i+1} / \${songs.length}</div>
+      <div class="answer-artist" style="font-family:'Trebuchet MS',system-ui,sans-serif;font-weight:700;font-size:clamp(2rem,5vw,3.5rem);color:#ff2d78;text-shadow:0 0 15px #ff2d78;line-height:1.1;margin-bottom:8px"></div>
+      <div class="answer-title" style="font-family:Impact,'Arial Black',system-ui,sans-serif;font-weight:700;font-size:clamp(1.1rem,2.5vw,1.9rem);color:#ffe600;text-shadow:0 0 12px #ffe600;margin-bottom:18px"></div>
+      <button class="btn btn-c" style="margin:0 0 20px" data-answer-toggle-idx="\${i}" onclick="toggleSingleAnswer(\${i})">👁 / 🙈 ARTISTE-TITRE</button>
       \${hb?\`<div class="bonus-box">
-        <div style="font-family:'Press Start 2P',monospace;font-size:.48rem;color:#00f5ff;letter-spacing:2px;margin-bottom:8px">🎯 QUESTION BONUS</div>
-        <div style="font-family:'Boogaloo',cursive;font-size:1.15rem;color:#ddd;line-height:1.5;margin-bottom:10px">\${s.bonus}</div>
+        <div style="font-family:'Courier New',monospace;font-weight:700;font-size:.48rem;color:#00f5ff;letter-spacing:2px;margin-bottom:8px">🎯 QUESTION BONUS</div>
+        <div style="font-family:'Trebuchet MS',system-ui,sans-serif;font-size:1.15rem;color:#ddd;line-height:1.5;margin-bottom:10px">\${s.bonus}</div>
         <button class="btn btn-y" onclick="reveal('ba-\${i}',this)">RÉVÉLER LA RÉPONSE</button>
         <div class="bonus-ans" id="ba-\${i}">💡 \${s.bonusAnswer||'—'}</div>
       </div>\`:''}
       <div style="display:flex;align-items:center;gap:16px;margin-top:6px">
         <button class="play-btn" id="pb-\${i}" onclick="togglePlay(\${i})">▶</button>
-        <div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.38);letter-spacing:2px">
-          \${s.mp3Data?'🎵 EXTRAIT MP3':(s.youtubeUrl?'🎵 EXTRAIT YOUTUBE':'⚠ PAS DE SOURCE AUDIO')}
+        <div style="font-family:'Courier New',monospace;font-size:1rem;color:rgba(255,255,255,.38);letter-spacing:2px">
+          \${s.mp3Data?'🎵 EXTRAIT MP3 HORS LIGNE':'⚠ PAS DE SOURCE AUDIO HORS LIGNE'}
           \${s.start?' · Début: '+s.start:''}
           \${s.duration?' · '+s.duration+'s':''}
         </div>
@@ -2130,13 +2205,28 @@ function build(){
     </div>\`;
   });
   c.innerHTML+=\`<div class="slide card intro-card" id="s-\${songs.length+1}">
-    <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,5vw,3.5rem);color:#00f5ff;text-shadow:0 0 15px #00f5ff">FIN DU BLINDTEST</div>
-    <div style="font-family:'Boogaloo',cursive;font-size:1.8rem;color:#ffe600;text-shadow:0 0 12px #ffe600;margin-top:8px">Merci d'avoir joué !</div>
+    <div style="font-family:'Trebuchet MS',system-ui,sans-serif;font-weight:700;font-size:clamp(2rem,5vw,3.5rem);color:#00f5ff;text-shadow:0 0 15px #00f5ff">FIN DU BLINDTEST</div>
+    <div style="font-family:'Trebuchet MS',system-ui,sans-serif;font-size:1.8rem;color:#ffe600;text-shadow:0 0 12px #ffe600;margin-top:8px">Merci d'avoir joué !</div>
     <div style="font-size:3.5rem;margin:26px 0">🏆</div>
-    <div style="font-family:'Boogaloo',cursive;font-size:1.2rem;color:rgba(255,255,255,.45)">Thème : <strong style="color:#fff">\${theme}</strong></div>
+    <div style="font-family:'Trebuchet MS',system-ui,sans-serif;font-size:1.2rem;color:rgba(255,255,255,.45)">Thème : <strong style="color:#fff">\${theme}</strong></div>
   </div>\`;
   updateNav();
+  updateAnswerVisibility();
 }
+function updateAnswerVisibility(){
+  const btn=document.getElementById('answerToggle');
+  if(btn)btn.textContent=answersVisible?'🙈 CACHER ARTISTE / TITRE':'👁 RÉVÉLER ARTISTE / TITRE';
+  document.querySelectorAll('[data-answer-idx]').forEach(el=>{
+    const i=parseInt(el.dataset.answerIdx,10),s=songs[i];if(!s)return;
+    const a=el.querySelector('.answer-artist'),t=el.querySelector('.answer-title');
+    const v=answerVisibility[i]!==false,b=el.querySelector('[data-answer-toggle-idx]');
+    if(a){a.textContent=v?s.artist:'ARTISTE MASQUÉ';a.style.opacity=v?'':'.55'}
+    if(t){t.textContent=v?'"'+s.title+'"':'TITRE MASQUÉ';t.style.opacity=v?'':'.55'}
+    if(b)b.textContent=v?'🙈 CACHER ARTISTE / TITRE':'👁 RÉVÉLER ARTISTE / TITRE';
+  });
+}
+function toggleAnswersVisible(){answersVisible=!answersVisible;answerVisibility=songs.map(()=>answersVisible);updateAnswerVisibility()}
+function toggleSingleAnswer(i){if(!songs[i])return;answerVisibility[i]=!(answerVisibility[i]!==false);updateAnswerVisibility()}
 function nav(d){
   const all=document.querySelectorAll('.slide');
   stopAudio();
@@ -2153,7 +2243,7 @@ function updateNav(){
   ctr.textContent=(cur>0&&cur<total-1)?\`\${cur} / \${songs.length}\`:'';
 }
 function reveal(id,btn){const el=document.getElementById(id);if(el)el.classList.add('shown');if(btn){btn.disabled=true;btn.style.opacity='.4'}}
-function stopAudio(){if(ytpl&&ytpl.pauseVideo)ytpl.pauseVideo();audio.pause();audioIdx=null;clearTimeout(window._t);clearTimeout(window._at);document.querySelectorAll('.play-btn').forEach(b=>{b.textContent='▶';b.classList.remove('playing')})}
+function stopAudio(){audio.pause();audioIdx=null;clearTimeout(window._at);document.querySelectorAll('.play-btn').forEach(b=>{b.textContent='▶';b.classList.remove('playing')})}
 function togglePlay(i){
   const s=songs[i];if(!s)return;
   const start=(t=>{if(!t)return 0;const p=String(t).split(':').map(Number);if(p.length===2)return p[0]*60+p[1];return parseFloat(p[0])||0})(s.start);
@@ -2175,20 +2265,8 @@ function togglePlay(i){
     if(mp3Start>0){audio.addEventListener('loadedmetadata',doPlay,{once:true});audio.load();}else{doPlay();}
     return;
   }
-  const m=s.youtubeUrl?s.youtubeUrl.match(/(?:v=|youtu\\.be\\/|embed\\/)([a-zA-Z0-9_-]{11})/):null;
-  const vid=m?m[1]:null;
-  if(!vid){alert('Ajoutez un MP3 ou un lien YouTube valide.');return}
-  if(!ytRdy){alert('Lecteur YouTube en cours de chargement... réessayez.');return}
-  const playing=ytpl.getPlayerState&&ytpl.getPlayerState()===1;
-  if(playing){stopAudio();return}
-  stopAudio();
-  ytpl.loadVideoById({videoId:vid,startSeconds:start});
-  ytpl.playVideo();
-  btn.textContent='⏸';btn.classList.add('playing');
-  window._t=setTimeout(()=>{ytpl.pauseVideo();btn.textContent='▶';btn.classList.remove('playing');},(parseInt(s.duration)||30)*1000);
+  alert('Aucun extrait MP3 intégré pour cette chanson. Le fichier reste hors réseau.');
 }
-window.onYouTubeIframeAPIReady=function(){ytpl=new YT.Player('ytpl',{width:1,height:1,playerVars:{autoplay:0,controls:0},events:{onReady:()=>{ytRdy=true}}})};
-(function(){const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)})();
 document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();nav(1)}if(e.key==='ArrowLeft'){e.preventDefault();nav(-1)}});
 build();
 <\/script></body></html>`;

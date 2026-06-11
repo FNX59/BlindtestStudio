@@ -2,7 +2,7 @@
 
 Application éducative de création de blindtests avec génération LLM, préparation audio locale et présentation autonome.
 
-**Version : 1.0.2**
+**Version : 1.0.3**
 
 ## Fonctionnalités
 
@@ -11,6 +11,8 @@ Application éducative de création de blindtests avec génération LLM, prépar
 - Préparation audio locale
 - Interface utilisateur moderne et réactive
 - Mode hors-ligne (PWA)
+- Révélation artiste/titre globale ou indépendante par vignette
+- Export HTML autonome avec audio embarqué quand disponible
 
 ## Technologies utilisées
 
@@ -22,7 +24,7 @@ Application éducative de création de blindtests avec génération LLM, prépar
 ## Installation
 
 1. Clonez le dépôt
-2. Ouvrez `index.html` dans votre navigateur
+2. Ouvrez `public/index.html` dans votre navigateur
 3. L'application fonctionne en mode hors-ligne une fois installée
 
 ## Utilisation
@@ -31,13 +33,19 @@ Application éducative de création de blindtests avec génération LLM, prépar
 2. Générez des questions avec l'IA
 3. Ajoutez vos fichiers audio
 4. Lancez le blindtest
+5. Utilisez le bouton de révélation principal pour toutes les vignettes, ou le bouton d'une vignette pour ne révéler que celle-ci
 
 ## Structure du projet
 
-- `index.html` : Point d'entrée principal
-- `manifest.json` : Configuration PWA
-- `sw.js` : Service worker pour le mode hors-ligne
-- `audio-extract-server.js` : Serveur pour l'extraction audio
+- `public/index.html` : Point d'entrée principal
+- `public/manifest.json` : Configuration PWA
+- `public/sw.js` : Service worker pour le mode hors-ligne
+- `public/audio-extract-server.js` : Serveur pour l'extraction audio
+- `blindtest_*.html` : Exports autonomes générés
+
+## Fichiers ignores
+
+Les caches audio, extraits `.mp3/.webm`, fichiers temporaires, scripts de test locaux et exports réduits `*_reduit.html` ne sont pas destinés au dépôt.
 
 ## Licence
 

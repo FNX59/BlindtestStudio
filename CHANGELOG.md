@@ -2,6 +2,17 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [1.0.3] - 2026-06-11
+
+### Corrections
+- Correction du bouton de révélation artiste/titre : le bouton général agit sur toutes les vignettes, tandis que le bouton d'une vignette ne modifie plus que cette vignette.
+- Mise à jour du modèle d'export pour que les blindtests générés conservent ce comportement en mode autonome.
+
+### Maintenance
+- Nettoyage des fichiers temporaires, caches audio et exports réduits générés localement.
+- Simplification du `.gitignore` avec des règles génériques pour les artefacts audio, caches et fichiers de test locaux.
+- Mise à jour du cache PWA du service worker.
+
 ## [1.0.2] - 2025-06-09
 
 ### Modifications
