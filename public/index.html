@@ -358,7 +358,7 @@ td{padding:5px 4px}
           <input class="inp" id="auto-baseurl" placeholder="https://.../v1/chat/completions">
         </div>
         <div id="auto-proxy-wrap" style="display:none;margin-bottom:12px">
-          <label class="lbl">URL Worker n8n</label>
+          <label class="lbl" id="auto-proxy-label">URL Worker n8n</label>
           <input class="inp" id="auto-proxyurl" placeholder="https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy">
         </div>
         <label class="lbl">🔑 CLÉ API</label>
@@ -373,6 +373,10 @@ td{padding:5px 4px}
       <div style="margin-bottom:16px">
         <label class="lbl">Thème du blindtest</label>
         <input class="inp" id="auto-theme" placeholder="ex: Chanson française 80s, Pop internationale...">
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="lbl">Commentaires</label>
+        <textarea class="inp" id="auto-comments" rows="3" placeholder="Consignes optionnelles pour le LLM : niveau, public, exclusions, équilibre des artistes..." style="resize:vertical;min-height:82px;line-height:1.45"></textarea>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
         <div><label class="lbl">Nombre de manches</label><input class="inp" id="auto-rounds" type="number" value="3" min="1" max="10"></div>
@@ -816,7 +820,7 @@ const LLM_PROVIDERS = {
     models: ['mistral-small-latest', 'mistral-medium-latest', 'mistral-large-latest', 'codestral-latest'],
     url: 'https://api.mistral.ai/v1/chat/completions',
     mode: 'openai',
-    help: "Utilise l'API Mistral avec authentification Bearer."
+    help: "Utilise l'API Mistral avec authentification Bearer. Si le navigateur bloque CORS ou si vous voulez masquer la clé, configurez un worker personnalisé facultatif."
   },
   perplexity: {
     label: 'Perplexity',
@@ -824,7 +828,7 @@ const LLM_PROVIDERS = {
     models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro', 'sonar-deep-research'],
     url: 'https://api.perplexity.ai/chat/completions',
     mode: 'openai',
-    help: "Utilise l'API Perplexity Chat Completions avec authentification Bearer."
+    help: "Utilise l'API Perplexity Chat Completions avec authentification Bearer. Si le navigateur bloque CORS ou si vous voulez masquer la clé, configurez un worker personnalisé facultatif."
   },
   claude: {
     label: 'Claude AI',
@@ -832,7 +836,7 @@ const LLM_PROVIDERS = {
     models: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-6'],
     url: 'https://api.anthropic.com/v1/messages',
     mode: 'anthropic',
-    help: "Utilise l'API Anthropic Messages avec en-tête x-api-key."
+    help: "Utilise l'API Anthropic Messages avec en-tête x-api-key. Si le navigateur bloque CORS ou si vous voulez masquer la clé, configurez un worker personnalisé facultatif."
   },
   gemini: {
     label: 'Gemini',
@@ -840,7 +844,7 @@ const LLM_PROVIDERS = {
     models: ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
     url: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
     mode: 'gemini',
-    help: 'Utilise Google AI Studio. Gemini est disponible, mais pas sélectionné par défaut.'
+    help: 'Utilise Google AI Studio. Si le navigateur bloque CORS ou si vous voulez masquer la clé, configurez un worker personnalisé facultatif.'
   },
   openai: {
     label: 'ChatGPT',
@@ -848,7 +852,7 @@ const LLM_PROVIDERS = {
     models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'],
     url: 'https://api.openai.com/v1/chat/completions',
     mode: 'openai',
-    help: "Utilise l'API OpenAI Chat Completions avec authentification Bearer."
+    help: "Utilise l'API OpenAI Chat Completions avec authentification Bearer. Si le navigateur bloque CORS ou si vous voulez masquer la clé, configurez un worker personnalisé facultatif."
   },
   albert: {
     label: 'API Albert',
@@ -871,7 +875,7 @@ const LLM_PROVIDERS = {
     url: '',
     proxyUrl: '',
     mode: 'openai',
-    help: "Utilisez une API compatible OpenAI. Renseignez l'URL complète de chat completions."
+    help: "Utilisez une API compatible OpenAI. Renseignez l'URL complète de chat completions. Vous pouvez aussi router l'appel via un worker personnalisé facultatif."
   }
 };
 
@@ -942,8 +946,10 @@ function updateLlmFields() {
   const baseUrlWrap = document.getElementById('auto-baseurl-wrap');
   const proxyUrlEl = document.getElementById('auto-proxyurl');
   const proxyWrap = document.getElementById('auto-proxy-wrap');
+  const proxyLabel = document.getElementById('auto-proxy-label');
   const apiKeyEl = document.getElementById('auto-apikey');
   const helpEl = document.getElementById('auto-provider-help');
+  const isAlbert = providerId === 'albert';
 
   if (modelListEl) {
     modelListEl.innerHTML = '';
@@ -961,19 +967,24 @@ function updateLlmFields() {
   }
   if (proxyUrlEl) {
     proxyUrlEl.value = saved.proxyUrl || provider.proxyUrl || '';
-    proxyUrlEl.placeholder = provider.proxyUrl || 'https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy';
+    proxyUrlEl.placeholder = isAlbert
+      ? 'https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy'
+      : 'https://votre-worker.example.com/llm-proxy';
+  }
+  if (proxyLabel) {
+    proxyLabel.textContent = isAlbert ? 'URL Worker n8n' : 'URL Worker personnalisé';
   }
   if (apiKeyEl) {
     apiKeyEl.value = saved.apiKey || '';
-    apiKeyEl.placeholder = providerId === 'albert'
+    apiKeyEl.placeholder = isAlbert
       ? 'Clé Albert (ou vide si configurée dans le worker n8n)'
-      : 'Clé API du fournisseur choisi';
+      : 'Clé API (ou vide si configurée dans le worker personnalisé)';
   }
   if (baseUrlWrap) {
     baseUrlWrap.style.display = ['albert', 'custom'].includes(providerId) ? 'block' : 'none';
   }
   if (proxyWrap) {
-    proxyWrap.style.display = ['albert', 'custom'].includes(providerId) ? 'block' : 'none';
+    proxyWrap.style.display = 'block';
   }
   if (helpEl) helpEl.textContent = saved.apiKey ? `${provider.help} Clé enregistrée pour ce fournisseur.` : provider.help;
   const statusEl = document.getElementById('auto-llm-status');
@@ -984,7 +995,7 @@ function updateLlmFields() {
 function saveLlmSettings() {
   const cfg = getLlmConfig();
   if (cfg.id === 'albert' && !cfg.proxyUrl) { setLlmStatus("Pour Albert, l'URL du worker n8n est OBLIGATOIRE. Configurez-la avant d'enregistrer.", 'error'); return; }
-  if (!cfg.apiKey && cfg.id !== 'albert') { setLlmStatus(`Saisissez une clé API ${cfg.label} avant d'enregistrer.`, 'error'); return; }
+  if (!cfg.apiKey && cfg.id !== 'albert' && !cfg.proxyUrl) { setLlmStatus(`Saisissez une clé API ${cfg.label} ou configurez un worker personnalisé avant d'enregistrer.`, 'error'); return; }
   if (cfg.id === 'custom' && !cfg.url) { setLlmStatus('Saisissez une URL API pour ce fournisseur personnalisé.', 'error'); return; }
   localStorage.setItem(LLM_STORAGE_PREFIX + cfg.id, JSON.stringify({
     apiKey: cfg.apiKey,
@@ -1018,13 +1029,14 @@ function explainNetworkError(error, cfg) {
     if (cfg?.id === 'albert') {
       return "Le worker n8n retourne une réponse invalide. Vérifiez que l'URL du worker est correcte et que le worker est actif. URL par défaut: https://n8n.incubateur.education.gouv.fr/webhook/blindtest-llm-proxy";
     }
-    return 'Réponse JSON invalide. Vérifiez la configuration du proxy.';
+    return 'Réponse JSON invalide. Vérifiez la configuration du fournisseur ou du worker personnalisé.';
   }
   return msg;
 }
 
 async function llmFetch(cfg, url, options = {}) {
-  // Albert MUST go through the n8n proxy (CORS blocks direct calls)
+  // Albert MUST go through the n8n worker (CORS blocks direct calls).
+  // Other providers may optionally use a custom worker with { url, method, headers, body }.
   if (cfg.id === 'albert' && !cfg.proxyUrl) {
     throw new Error('NetworkError: le worker n8n est requis pour Albert (champ URL Worker n8n vide).');
   }
@@ -1049,8 +1061,8 @@ async function llmFetch(cfg, url, options = {}) {
     // Log response for debugging
     if (!res.ok) {
       const raw = await res.text();
-      console.error('Albert proxy error response:', raw);
-      throw new Error(`Proxy error ${res.status}: ${raw}`);
+      console.error('Albert worker error response:', raw);
+      throw new Error(`Worker n8n error ${res.status}: ${raw}`);
     }
     return res;
   }
@@ -1123,7 +1135,7 @@ async function callLlm(prompt, cfg) {
     data = JSON.parse(raw);
   } catch (e) {
     console.error('JSON parse error, raw response:', raw);
-    throw new Error(`Réponse JSON invalide du proxy: ${raw.substring(0, 200)}...`);
+    throw new Error(`Réponse JSON invalide du fournisseur ou du worker: ${raw.substring(0, 200)}...`);
   }
   return data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
 }
@@ -1161,7 +1173,7 @@ async function fetchLlmModels(cfg) {
     data = JSON.parse(raw);
   } catch (e) {
     console.error('JSON parse error in fetchLlmModels, raw response:', raw);
-    throw new Error(`Réponse JSON invalide du proxy (models): ${raw.substring(0, 200)}...`);
+    throw new Error(`Réponse JSON invalide du fournisseur ou du worker (models): ${raw.substring(0, 200)}...`);
   }
   const CHAT_TYPES = ['text-generation', 'image-text-to-text'];
   return (data.data || data.models || [])
@@ -1276,7 +1288,7 @@ async function testLlmConnection() {
   const cfg = { ...currentCfg, model: saved.model || currentCfg.model || getDefaultModel(currentCfg.id) };
   const btn = document.getElementById('auto-test-btn');
   if (cfg.id === 'albert' && !cfg.proxyUrl) { setLlmStatus("Pour Albert, l'URL du worker n8n est OBLIGATOIRE. Configurez-la dans le champ 'URL Worker n8n'.", 'error'); return; }
-  if (!cfg.apiKey && cfg.id !== 'albert') { setLlmStatus(`Saisissez une clé API ${cfg.label} avant de tester.`, 'error'); return; }
+  if (!cfg.apiKey && cfg.id !== 'albert' && !cfg.proxyUrl) { setLlmStatus(`Saisissez une clé API ${cfg.label} ou configurez un worker personnalisé avant de tester.`, 'error'); return; }
   if (!cfg.model) { setLlmStatus("Aucun modèle de test n'est défini pour ce fournisseur.", 'error'); return; }
   if (!cfg.url) { setLlmStatus('Saisissez une URL API avant de tester.', 'error'); return; }
 
@@ -1307,6 +1319,7 @@ async function testLlmConnection() {
 async function generatePlaylist() {
   const llmCfg = getLlmConfig();
   const theme = document.getElementById('auto-theme').value.trim();
+  const comments = document.getElementById('auto-comments')?.value.trim() || '';
   const rounds = parseInt(document.getElementById('auto-rounds').value) || 3;
   const spr = parseInt(document.getElementById('auto-spr').value) || 5;
   const duration = parseInt(document.getElementById('auto-duration').value) || 30;
@@ -1316,7 +1329,7 @@ async function generatePlaylist() {
   errEl.style.display = 'none';
 
   if (llmCfg.id === 'albert' && !llmCfg.proxyUrl) { showErr("Pour Albert, l'URL du worker n8n est OBLIGATOIRE. Configurez-la dans le champ 'URL Worker n8n'."); return; }
-  if (!llmCfg.apiKey && llmCfg.id !== 'albert') { showErr(`Veuillez saisir votre clé API ${llmCfg.label} !`); return; }
+  if (!llmCfg.apiKey && llmCfg.id !== 'albert' && !llmCfg.proxyUrl) { showErr(`Veuillez saisir votre clé API ${llmCfg.label} ou configurer un worker personnalisé !`); return; }
   if (!llmModelAccess[llmCfg.id] || document.getElementById('auto-model').disabled) { showErr('Veuillez tester la connexion avant de choisir le modèle et générer la playlist.'); return; }
   if (!llmCfg.model) { showErr('Veuillez saisir le modèle à utiliser !'); return; }
   if (!llmCfg.url) { showErr("Veuillez saisir l'URL API à utiliser !"); return; }
@@ -1328,6 +1341,9 @@ async function generatePlaylist() {
   const total = rounds * spr;
   const bonusLine = bonus ? `- Pour chaque chanson, propose une question bonus (anecdote ou fait intéressant) et sa réponse.` : `- Les champs "bonus" et "bonusAnswer" doivent être des chaînes vides "".`;
   const themeRules = buildThemeRules(theme);
+  const commentInstructions = comments
+    ? `\nCOMMENTAIRES UTILISATEUR À RESPECTER :\n${comments}\n`
+    : '';
   
   let allParsed = [];
 
@@ -1338,6 +1354,7 @@ async function generatePlaylist() {
 
 CONTRAINTES DU THÈME :
 ${themeRules}
+${commentInstructions}
 
 RÈGLES :
 - Chansons variées et emblématiques du thème
@@ -1363,7 +1380,7 @@ Génère exactement ${spr} objets.`;
     }
     
     autoSongs = allParsed.map(s => ({ ...s, id: Date.now() + Math.random(), selected: true, bonusEnabled: !!bonus, mp3Data: '', mp3Name: '' }));
-    autoConfig = { theme, rounds, spr, duration, bonus, showAnswers, llm: llmCfg };
+    autoConfig = { theme, comments, rounds, spr, duration, bonus, showAnswers, llm: llmCfg };
     document.getElementById('auto-table-title').textContent = '🎵 ' + theme;
     renderAutoTable();
     showScreen('screen-auto-table');
