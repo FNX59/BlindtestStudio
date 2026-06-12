@@ -504,30 +504,41 @@ let audioCurrentIdx = null;
 const AUDIO_EXTRACT_API = localStorage.getItem('blindtestAudioExtractApi') || 'http://localhost:3478/api/extract';
 
 // ================================================================
-// WEB AUDIO — Fade in / Fade out (1.5 s)
+// WEB AUDIO — Volume normalization + fade in / fade out (1.5 s)
 // ================================================================
 let _audioCtx = null;
 let _gainNode = null;
+let _compressorNode = null;
 let _audioSource = null;
 const FADE_DURATION = 1.5; // secondes
+const NORMALIZED_OUTPUT_GAIN = 0.9;
 
 function getAudioCtx() {
   if (!_audioCtx || _audioCtx.state === 'closed') {
     _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     _gainNode = _audioCtx.createGain();
+    _compressorNode = _audioCtx.createDynamicsCompressor();
+    _compressorNode.threshold.setValueAtTime(-24, _audioCtx.currentTime);
+    _compressorNode.knee.setValueAtTime(30, _audioCtx.currentTime);
+    _compressorNode.ratio.setValueAtTime(12, _audioCtx.currentTime);
+    _compressorNode.attack.setValueAtTime(0.003, _audioCtx.currentTime);
+    _compressorNode.release.setValueAtTime(0.25, _audioCtx.currentTime);
+    _gainNode.gain.setValueAtTime(NORMALIZED_OUTPUT_GAIN, _audioCtx.currentTime);
     _gainNode.connect(_audioCtx.destination);
+    _compressorNode.connect(_gainNode);
   }
-  return { ctx: _audioCtx, gain: _gainNode };
+  return { ctx: _audioCtx, gain: _gainNode, compressor: _compressorNode };
 }
 
 function connectAudioToGain(player) {
   // Déconnecter l'ancienne source si elle existe
   try { if (_audioSource) { _audioSource.disconnect(); _audioSource = null; } } catch(e) {}
-  const { ctx, gain } = getAudioCtx();
+  const { ctx, compressor } = getAudioCtx();
   // Reprendre le contexte si suspendu (politique autoplay)
   if (ctx.state === 'suspended') ctx.resume();
+  player.volume = 1;
   _audioSource = ctx.createMediaElementSource(player);
-  _audioSource.connect(gain);
+  _audioSource.connect(compressor);
 }
 
 function fadeIn(onComplete) {
@@ -535,7 +546,7 @@ function fadeIn(onComplete) {
   const now = ctx.currentTime;
   gain.gain.cancelScheduledValues(now);
   gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(1, now + FADE_DURATION);
+  gain.gain.linearRampToValueAtTime(NORMALIZED_OUTPUT_GAIN, now + FADE_DURATION);
   if (onComplete) setTimeout(onComplete, FADE_DURATION * 1000);
 }
 
@@ -2283,6 +2294,32 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 const theme=${JSON.stringify(theme)};
 const songs=${slidesData};
 let cur=0,audio=new Audio(),audioIdx=null,answersVisible=${JSON.stringify(exportedAnswersVisible)},answerVisibility=songs.map(()=>answersVisible);
+let audioCtx=null,masterGain=null,compressor=null,audioSource=null;
+const NORMALIZED_OUTPUT_GAIN=.9;
+function getAudioCtx(){
+  if(!audioCtx||audioCtx.state==='closed'){
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    masterGain=audioCtx.createGain();
+    compressor=audioCtx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-24,audioCtx.currentTime);
+    compressor.knee.setValueAtTime(30,audioCtx.currentTime);
+    compressor.ratio.setValueAtTime(12,audioCtx.currentTime);
+    compressor.attack.setValueAtTime(.003,audioCtx.currentTime);
+    compressor.release.setValueAtTime(.25,audioCtx.currentTime);
+    masterGain.gain.setValueAtTime(NORMALIZED_OUTPUT_GAIN,audioCtx.currentTime);
+    compressor.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+  }
+  return{ctx:audioCtx,compressor};
+}
+function connectNormalizedAudio(player){
+  try{if(audioSource){audioSource.disconnect();audioSource=null}}catch(e){}
+  const chain=getAudioCtx();
+  if(chain.ctx.state==='suspended')chain.ctx.resume();
+  player.volume=1;
+  audioSource=chain.ctx.createMediaElementSource(player);
+  audioSource.connect(chain.compressor);
+}
 function build(){
   const c=document.getElementById('slides');
   c.innerHTML='';
@@ -2372,6 +2409,7 @@ function togglePlay(i){
     audioIdx=i;
     const doPlay=()=>{
       try{audio.currentTime=mp3Start;}catch(e){}
+      connectNormalizedAudio(audio);
       audio.play().then(()=>{
         btn.textContent='⏸';btn.classList.add('playing');
         window._at=setTimeout(()=>{audio.pause();btn.textContent='▶';btn.classList.remove('playing')},(parseInt(s.duration)||30)*1000);
