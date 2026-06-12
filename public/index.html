@@ -1137,7 +1137,65 @@ async function callLlm(prompt, cfg) {
     console.error('JSON parse error, raw response:', raw);
     throw new Error(`Réponse JSON invalide du fournisseur ou du worker: ${raw.substring(0, 200)}...`);
   }
-  return data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
+  const content = extractLlmContent(data);
+  if (!content) {
+    console.error('LLM response without extractable content:', data);
+    throw new Error("La réponse du LLM ne contient pas de texte exploitable.");
+  }
+  return content;
+}
+
+function getNestedValue(obj, path) {
+  return path.reduce((acc, key) => acc == null ? undefined : acc[key], obj);
+}
+
+function stringifyIfJson(value) {
+  if (typeof value === 'string') return value;
+  if (value == null) return '';
+  if (Array.isArray(value) || typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function extractLlmContent(data) {
+  if (typeof data === 'string') return data;
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      const text = extractLlmContent(item);
+      if (text) return text;
+    }
+    return '';
+  }
+
+  const paths = [
+    ['choices', 0, 'message', 'content'],
+    ['choices', 0, 'text'],
+    ['message', 'content'],
+    ['content'],
+    ['text'],
+    ['output'],
+    ['response'],
+    ['answer'],
+    ['result'],
+    ['data', 'content'],
+    ['data', 'text'],
+    ['data', 'output'],
+    ['data', 'response'],
+    ['body', 'choices', 0, 'message', 'content'],
+    ['body', 'content'],
+    ['body', 'text'],
+    ['body', 'output'],
+    ['json', 'choices', 0, 'message', 'content'],
+    ['json', 'content'],
+    ['json', 'text'],
+    ['json', 'output']
+  ];
+
+  for (const path of paths) {
+    const value = getNestedValue(data, path);
+    const text = stringifyIfJson(value).trim();
+    if (text) return text;
+  }
+  return '';
 }
 
 async function fetchLlmModels(cfg) {
@@ -1204,32 +1262,30 @@ function extractJsonPayload(text) {
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/i, '')
     .replace(/```$/i, '')
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
     .trim();
   try {
     return JSON.parse(clean);
   } catch (e) {
-    // Try to extract JSON by finding matching brackets
-    const startArray = clean.indexOf('[');
-    const endArray = clean.lastIndexOf(']');
-    if (startArray !== -1 && endArray > startArray) {
-      try {
-        return JSON.parse(clean.slice(startArray, endArray + 1));
-      } catch {}
-    }
-    const startObject = clean.indexOf('{');
-    const endObject = clean.lastIndexOf('}');
-    if (startObject !== -1 && endObject > startObject) {
-      try {
-        return JSON.parse(clean.slice(startObject, endObject + 1));
-      } catch {}
-    }
-    // Try to find the first complete JSON object/array by counting brackets
-    let bracketCount = 0;
+    const parsedFromBlock = extractFirstJsonBlock(clean);
+    if (parsedFromBlock !== null) return parsedFromBlock;
+    console.error('JSON parse error, raw response:', clean.substring(0, 500));
+    throw new Error('La réponse du LLM ne contient pas de JSON valide.');
+  }
+}
+
+function extractFirstJsonBlock(text) {
+  for (let start = 0; start < text.length; start++) {
+    const opening = text[start];
+    if (opening !== '{' && opening !== '[') continue;
+
+    const expectedClose = opening === '{' ? '}' : ']';
+    const stack = [expectedClose];
     let inString = false;
     let escapeNext = false;
-    let jsonStart = -1;
-    for (let i = 0; i < clean.length; i++) {
-      const char = clean[i];
+
+    for (let i = start + 1; i < text.length; i++) {
+      const char = text[i];
       if (escapeNext) {
         escapeNext = false;
         continue;
@@ -1238,27 +1294,29 @@ function extractJsonPayload(text) {
         escapeNext = true;
         continue;
       }
-      if (char === '"' || char === "'") {
+      if (char === '"') {
         inString = !inString;
         continue;
       }
       if (inString) continue;
-      
-      if (char === '{' || char === '[') {
-        if (bracketCount === 0) jsonStart = i;
-        bracketCount++;
-      } else if (char === '}' || char === ']') {
-        bracketCount--;
-        if (bracketCount === 0 && jsonStart !== -1) {
+
+      if (char === '{') stack.push('}');
+      else if (char === '[') stack.push(']');
+      else if (char === '}' || char === ']') {
+        if (char !== stack[stack.length - 1]) break;
+        stack.pop();
+        if (!stack.length) {
+          const candidate = text.slice(start, i + 1);
           try {
-            return JSON.parse(clean.slice(jsonStart, i + 1));
-          } catch {}
+            return JSON.parse(candidate);
+          } catch {
+            break;
+          }
         }
       }
     }
-    console.error('JSON parse error, raw response:', clean.substring(0, 500));
-    throw new Error('La réponse du LLM ne contient pas de JSON valide.');
   }
+  return null;
 }
 
 function buildThemeRules(theme) {
