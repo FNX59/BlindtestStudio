@@ -2,12 +2,13 @@
 
 Application éducative de création de blindtests avec génération LLM, préparation audio locale et présentation autonome.
 
-**Version : 1.0.4**
+**Version : 1.0.5**
 
 ## Fonctionnalités
 
 - Création de blindtests interactifs
 - Génération de questions avec LLM
+- Signalement des propositions LLM dont le lien au thème est trop vague
 - Préparation audio locale
 - Normalisation du volume entre chansons pendant la lecture
 - Interface utilisateur moderne et réactive
@@ -43,6 +44,8 @@ La lecture audio applique automatiquement une normalisation en temps réel afin 
 ## Génération LLM
 
 La génération de playlist accepte les réponses JSON directes ou enveloppées par un worker Albert/n8n, par exemple `songs`, `playlist`, `output`, `response` ou `data`.
+
+Les prompts demandent un lien vérifiable avec le thème (titre, paroles, sujet, clip ou contexte culturel connu). Les justifications vagues sont signalées dans le tableau de validation.
 
 ## Structure du projet
 

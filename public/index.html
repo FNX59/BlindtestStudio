@@ -1368,10 +1368,18 @@ function buildThemeRules(theme) {
   const t = String(theme || '').toLowerCase();
   const rules = [
     `- Respecte TOUS les qualificatifs du thème "${theme}" : genre, pays/zone, langue, période, décennie, ambiance.`,
+    "- Le lien avec le thème doit être vérifiable : titre, refrain/paroles célèbres, sujet explicite de la chanson, clip connu ou contexte culturel notoire.",
+    "- Refuse les liens vagues ou inventés : \"populaire en été\", \"souvenirs\", \"ambiance\", \"souvent associé à\" ne suffisent pas.",
+    "- Si tu ne peux pas expliquer précisément le lien au thème, choisis une autre chanson plus évidente.",
     "- Ne remplace jamais une contrainte géographique par une scène équivalente d'un autre pays.",
     '- Si le thème contient une décennie, chaque titre doit être sorti pendant cette décennie, pas seulement dans un style proche.',
     "- Si un morceau ne respecte pas une contrainte explicite du thème, exclue-le même s'il est célèbre."
   ];
+  if (/\b(vacance|vacances|été|ete|summer|plage|soleil|voyage|depart|départ)\b/i.test(t)) {
+    rules.push('- THÈME VACANCES/ÉTÉ : privilégie des chansons dont le titre, les paroles ou le sujet évoquent clairement vacances, été, soleil, plage, voyage, départ, îles, tropiques ou farniente.');
+    rules.push('- Pour ce thème, exclue les chansons seulement romantiques, nostalgiques ou populaires en été si elles ne parlent pas explicitement de vacances/été/voyage.');
+    rules.push('- Contre-exemples à refuser pour "Les vacances" : une chanson triste ou romantique justifiée par "souvenirs d’été", "populaire en été" ou "associée aux vacances".');
+  }
   if (/\b(us|usa|u\.s\.|u\.s\.a\.|united states|états-unis|etats-unis|américain|americaine|américaine|american)\b/i.test(theme)) {
     rules.push('- CONTRAINTE US OBLIGATOIRE : tous les artistes/groupes doivent venir des États-Unis. Exclure rap français, belge, canadien, britannique ou autre pays.');
     rules.push('- Pour un thème comme "Rap US 90", propose uniquement du rap/hip-hop américain sorti entre 1990 et 1999.');
@@ -1383,6 +1391,55 @@ function buildThemeRules(theme) {
     rules.push('- CONTRAINTE ANNÉES 90 : les titres doivent être sortis entre 1990 et 1999 inclus.');
   }
   return rules.join('\n');
+}
+
+function normalizeTextForChecks(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function getThemeAnchorWords(theme) {
+  const text = normalizeTextForChecks(theme);
+  const words = text
+    .split(/[^a-z0-9]+/i)
+    .filter(w => w.length >= 4 && !['avec', 'pour', 'dans', 'sans', 'theme', 'chanson', 'chansons'].includes(w));
+  const anchors = new Set(words);
+  if (/\b(vacance|vacances|ete|summer|plage|soleil|voyage|depart)\b/.test(text)) {
+    [
+      'vacance', 'vacances', 'ete', 'summer', 'plage', 'soleil', 'voyage', 'depart',
+      'route', 'mer', 'ile', 'iles', 'tropique', 'tropiques', 'farniente', 'camping',
+      'holiday', 'holidays', 'beach', 'sun', 'travel'
+    ].forEach(w => anchors.add(w));
+  }
+  return Array.from(anchors);
+}
+
+function hasThemeAnchor(text, anchors) {
+  const normalized = normalizeTextForChecks(text);
+  return anchors.some(anchor => normalized.includes(anchor));
+}
+
+function getThemeRelevanceWarning(song, theme) {
+  const anchors = getThemeAnchorWords(theme);
+  if (!anchors.length) return '';
+
+  const titleArtist = `${song.title || ''} ${song.artist || ''}`;
+  const justification = song.justification || '';
+  const combined = `${titleArtist} ${justification}`;
+  const hasAnchorInTitle = hasThemeAnchor(titleArtist, anchors);
+  const hasAnchorAnywhere = hasThemeAnchor(combined, anchors);
+  const vagueJustification = /\b(populaire|associe|associee|souvent associe|ambiance|souvenir|souvenirs|evoquant|evocation|rappelle|rappellent|fait penser|estival|ete)\b/.test(normalizeTextForChecks(justification));
+  const concreteReason = /\b(titre|paroles|refrain|clip|sujet|raconte|parle|mentionne|nomme|sortie|hymne|classique)\b/.test(normalizeTextForChecks(justification));
+
+  if (!hasAnchorAnywhere) {
+    return 'Lien au thème non démontré dans le titre ou la justification.';
+  }
+  if (vagueJustification && !hasAnchorInTitle && !concreteReason) {
+    return 'Justification trop vague : vérifiez que la chanson parle vraiment du thème.';
+  }
+  return '';
 }
 
 async function testLlmConnection() {
@@ -1463,13 +1520,16 @@ RÈGLES :
 - Chansons variées et emblématiques du thème
 - Aucun doublon (ne propose pas d'artistes déjà utilisés si possible)
 - Chaque objet doit respecter exactement les contraintes du thème
+- Le lien au thème doit être direct et défendable : titre, paroles/refrain, sujet explicite, clip connu ou contexte culturel notoire.
+- Interdiction des justifications faibles : "populaire en été", "souvent associé à", "souvenirs", "ambiance", "évoque l'amour et les vacances" sans preuve concrète.
+- Si le thème est abstrait (ex: vacances, école, pluie, nuit), choisis des chansons qui citent clairement ce thème ou le racontent vraiment.
 - Timing de début entre 0:20 et 1:30 (évite les longues intros)
 - Durée de l'extrait : ${duration} secondes
 ${bonusLine}
 - Assigne la valeur exacte ${currentRound} au champ "manche".
 - Pour "youtubeUrl" : utilise de vrais liens YouTube connus. Si incertain, utilise https://www.youtube.com/results?search_query=ARTISTE+TITRE
-- Avant de répondre, vérifie mentalement chaque chanson : artiste, pays/scène, décennie, genre et adéquation au thème.
-- Pour le champ "justification" : explique en 1-2 phrases pourquoi cette chanson correspond au thème "${theme}" (décennie, genre, artiste emblématique, popularité...).
+- Avant de répondre, vérifie mentalement chaque chanson : artiste, pays/scène, décennie, genre et lien concret avec le thème.
+- Pour le champ "justification" : explique en 1 phrase le lien vérifiable avec "${theme}" (titre, paroles, sujet, clip ou contexte connu). Ne cite pas seulement la popularité, la nostalgie ou une ambiance.
 
 Réponds UNIQUEMENT avec un tableau JSON valide, sans markdown, sans backticks, sans commentaires :
 [{"artist":"...","title":"...","youtubeUrl":"https://...","start":"0:45","duration":${duration},"bonus":"...","bonusAnswer":"...","justification":"...","manche":${currentRound}}]
@@ -1490,6 +1550,7 @@ Génère exactement ${spr} objets.`;
     }
     
     autoSongs = allParsed.map(s => ({ ...s, id: Date.now() + Math.random(), selected: true, bonusEnabled: !!bonus, mp3Data: '', mp3Name: '' }));
+    autoSongs.forEach(s => { s.themeWarning = getThemeRelevanceWarning(s, theme); });
     autoConfig = { theme, comments, rounds, spr, duration, bonus, showAnswers, llm: llmCfg };
     document.getElementById('auto-table-title').textContent = '🎵 ' + theme;
     renderAutoTable();
@@ -1565,13 +1626,17 @@ function buildAutoRow(row) {
     <td><input class="cell-inp" value="${escHtml(row.bonus)}" ${bonusEnabled?'':'disabled'} data-idx="${i}" data-field="bonus" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
     <td><input class="cell-inp" value="${escHtml(row.bonusAnswer)}" ${bonusEnabled?'':'disabled'} data-idx="${i}" data-field="bonusAnswer" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>`;
   const justif = row.justification || '';
+  const warning = row.themeWarning || getThemeRelevanceWarning(row, autoConfig.theme || '');
+  const warningHtml = warning
+    ? `<div style="margin-top:4px;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#ffb84d;line-height:1.4">⚠ ${escHtml(warning)}</div>`
+    : '';
   return `<tr style="border-bottom:1px solid rgba(255,255,255,.03)">
     <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected?'checked':''} data-idx="${i}" data-field="selected" onchange="updateAutoRow(parseInt(this.dataset.idx),'selected',this.checked)"></td>
     ${['artist','title'].map(f =>
       `<td><input class="cell-inp" value="${escHtml(row[f])}" data-idx="${i}" data-field="${f}" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>`
     ).join('')}
     <td>
-      <div style="font-family:'Orbitron',sans-serif;font-size:.56rem;color:rgba(255,255,255,.9);line-height:1.5;padding:5px 6px;background:rgba(180,0,255,.06);border-radius:5px;border-left:2px solid rgba(180,0,255,.4);min-height:28px;font-style:italic">${escHtml(justif) || '<span style="opacity:.3">—</span>'}</div>
+      <div style="font-family:'Orbitron',sans-serif;font-size:.56rem;color:rgba(255,255,255,.9);line-height:1.5;padding:5px 6px;background:rgba(180,0,255,.06);border-radius:5px;border-left:2px solid ${warning ? '#ffb84d' : 'rgba(180,0,255,.4)'};min-height:28px;font-style:italic">${escHtml(justif) || '<span style="opacity:.3">—</span>'}${warningHtml}</div>
     </td>
     ${buildMp3Cell('auto', i, row)}
     <td style="position:relative">
@@ -1590,8 +1655,14 @@ function buildAutoRow(row) {
 
 function updateAutoRow(i, field, val) {
   autoSongs[i][field] = val;
+  let shouldRender = false;
+  if (['artist', 'title', 'justification'].includes(field)) {
+    autoSongs[i].themeWarning = getThemeRelevanceWarning(autoSongs[i], autoConfig.theme || '');
+    shouldRender = true;
+  }
   if (field === 'selected') updateAutoCount();
-  if (field === 'bonusEnabled') renderAutoTable();
+  if (field === 'bonusEnabled') shouldRender = true;
+  if (shouldRender) renderAutoTable();
 }
 
 function updateAutoCount() {
@@ -1649,17 +1720,20 @@ Chansons déjà dans la liste (à exclure absolument) : ${existing}
 
 RÈGLES :
 - La chanson proposée doit respecter toutes les contraintes du thème.
+- Le lien au thème doit être direct et vérifiable : titre, paroles/refrain, sujet explicite, clip connu ou contexte culturel notoire.
+- Refuse les justifications vagues comme "populaire en été", "souvenirs", "ambiance" ou "souvent associé à" sans preuve concrète.
 - Si le thème impose US/USA/États-Unis, l'artiste doit venir des États-Unis.
 - Si le thème impose une décennie, le titre doit être sorti pendant cette décennie.
 
 Réponds UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) :
-{"artist":"...","title":"...","youtubeUrl":"https://...","start":"0:45","duration":${autoConfig.duration || 30},"bonus":"...","bonusAnswer":"...","manche":${song.manche || 1}}`;
+{"artist":"...","title":"...","youtubeUrl":"https://...","start":"0:45","duration":${autoConfig.duration || 30},"bonus":"...","bonusAnswer":"...","justification":"Lien concret avec le thème en une phrase.","manche":${song.manche || 1}}`;
 
   try {
     const llmCfg = autoConfig.llm || getLlmConfig();
     const text = await callLlm(prompt, llmCfg);
     const newSong = extractJsonPayload(text);
     autoSongs[i] = { ...newSong, id: Date.now() + Math.random(), selected: true, bonusEnabled: song.bonusEnabled !== false, mp3Data: '', mp3Name: '' };
+    autoSongs[i].themeWarning = getThemeRelevanceWarning(autoSongs[i], autoConfig.theme || '');
     renderAutoTable();
   } catch (e) {
     alert(`Erreur remplacement : ${explainNetworkError(e, autoConfig.llm || getLlmConfig())}`);

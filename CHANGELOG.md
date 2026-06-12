@@ -2,6 +2,15 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [1.0.5] - 2026-06-12
+
+### Corrections
+- Renforcement des consignes LLM pour exiger un lien concret et vérifiable entre chaque chanson et le thème.
+- Signalement dans le tableau des justifications trop vagues ou suspectes, notamment pour les thèmes abstraits comme les vacances.
+
+### Maintenance
+- Mise à jour du cache PWA du service worker.
+
 ## [1.0.4] - 2026-06-12
 
 ### Ajouts
