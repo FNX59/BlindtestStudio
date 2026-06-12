@@ -1319,6 +1319,40 @@ function extractFirstJsonBlock(text) {
   return null;
 }
 
+function isSongLikeObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+    && ('artist' in value || 'title' in value || 'youtubeUrl' in value);
+}
+
+function coerceSongArray(payload) {
+  if (Array.isArray(payload)) {
+    return payload.length === 0 || payload.some(isSongLikeObject) ? payload : null;
+  }
+  if (typeof payload === 'string') {
+    try {
+      return coerceSongArray(extractJsonPayload(payload));
+    } catch {
+      return null;
+    }
+  }
+  if (!payload || typeof payload !== 'object') return null;
+
+  const preferredKeys = [
+    'songs', 'chansons', 'tracks', 'playlist', 'items', 'results',
+    'data', 'output', 'response', 'answer', 'result'
+  ];
+
+  for (const key of preferredKeys) {
+    const found = coerceSongArray(payload[key]);
+    if (found) return found;
+  }
+
+  for (const value of Object.values(payload)) {
+    if (Array.isArray(value) && value.some(isSongLikeObject)) return value;
+  }
+  return null;
+}
+
 function buildThemeRules(theme) {
   const t = String(theme || '').toLowerCase();
   const rules = [
@@ -1433,8 +1467,15 @@ Génère exactement ${spr} objets.`;
 
       const text = await callLlm(prompt, llmCfg);
       const parsed = extractJsonPayload(text);
-      if (!Array.isArray(parsed)) throw new Error('Le JSON reçu doit être un tableau de chansons.');
-      allParsed = allParsed.concat(parsed);
+      const songs = coerceSongArray(parsed);
+      if (!songs) {
+        console.error('Playlist JSON without song array:', parsed);
+        const receivedShape = parsed && typeof parsed === 'object'
+          ? `objet avec les clés: ${Object.keys(parsed).slice(0, 8).join(', ') || 'aucune'}`
+          : typeof parsed;
+        throw new Error(`Le JSON reçu ne contient pas de tableau de chansons (${receivedShape}).`);
+      }
+      allParsed = allParsed.concat(songs);
     }
     
     autoSongs = allParsed.map(s => ({ ...s, id: Date.now() + Math.random(), selected: true, bonusEnabled: !!bonus, mp3Data: '', mp3Name: '' }));
