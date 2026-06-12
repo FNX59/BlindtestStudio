@@ -2,6 +2,19 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [1.0.4] - 2026-06-12
+
+### Ajouts
+- Ajout d'une normalisation du volume via Web Audio API pour réduire les écarts sonores entre les chansons.
+- Injection de cette normalisation dans les exports HTML autonomes générés.
+
+### Corrections
+- Amélioration de la lecture des réponses Albert/n8n : prise en charge des réponses enveloppées (`songs`, `playlist`, `output`, `data`, etc.).
+- Extraction JSON plus robuste lorsque le LLM ajoute du texte, du markdown ou des balises de raisonnement autour de la réponse.
+
+### Maintenance
+- Mise à jour du cache PWA du service worker.
+
 ## [1.0.3] - 2026-06-11
 
 ### Corrections

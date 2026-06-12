@@ -2,23 +2,26 @@
 
 Application éducative de création de blindtests avec génération LLM, préparation audio locale et présentation autonome.
 
-**Version : 1.0.3**
+**Version : 1.0.4**
 
 ## Fonctionnalités
 
 - Création de blindtests interactifs
 - Génération de questions avec LLM
 - Préparation audio locale
+- Normalisation du volume entre chansons pendant la lecture
 - Interface utilisateur moderne et réactive
 - Mode hors-ligne (PWA)
 - Révélation artiste/titre globale ou indépendante par vignette
 - Export HTML autonome avec audio embarqué quand disponible
+- Export HTML autonome avec normalisation audio intégrée
 
 ## Technologies utilisées
 
 - HTML5, CSS3, JavaScript (ES6+)
 - Service Worker pour le mode hors-ligne
 - Web Audio API pour la lecture audio
+- Web Audio API `DynamicsCompressorNode` pour lisser les écarts de volume
 - LocalStorage pour le stockage local
 
 ## Installation
@@ -34,6 +37,12 @@ Application éducative de création de blindtests avec génération LLM, prépar
 3. Ajoutez vos fichiers audio
 4. Lancez le blindtest
 5. Utilisez le bouton de révélation principal pour toutes les vignettes, ou le bouton d'une vignette pour ne révéler que celle-ci
+
+La lecture audio applique automatiquement une normalisation en temps réel afin de limiter les différences de volume entre les extraits.
+
+## Génération LLM
+
+La génération de playlist accepte les réponses JSON directes ou enveloppées par un worker Albert/n8n, par exemple `songs`, `playlist`, `output`, `response` ou `data`.
 
 ## Structure du projet
 
