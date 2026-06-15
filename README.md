@@ -2,7 +2,7 @@
 
 Application éducative de création de blindtests avec génération LLM, préparation audio locale et présentation autonome.
 
-**Version : 1.0.5**
+**Version : 1.0.6**
 
 ## Fonctionnalités
 
@@ -54,6 +54,8 @@ Les prompts demandent un lien vérifiable avec le thème (titre, paroles, sujet,
 - `public/sw.js` : Service worker pour le mode hors-ligne
 - `public/audio-extract-server.js` : Serveur pour l'extraction audio
 - `blindtest_*.html` : Exports autonomes générés
+
+Le service audio local écoute sur `http://localhost:3478/api/extract` et stocke son cache dans `audio-cache-local/`.
 
 ## Fichiers ignores
 

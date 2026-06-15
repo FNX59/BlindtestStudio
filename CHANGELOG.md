@@ -2,6 +2,15 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [1.0.6] - 2026-06-12
+
+### Corrections
+- Correction du cache par défaut du service d'extraction audio : les fichiers temporaires sont maintenant stockés hors de `public/`.
+- Message plus clair lorsque le service audio local `localhost:3478` n'est pas joignable.
+
+### Maintenance
+- Mise à jour du cache PWA du service worker.
+
 ## [1.0.5] - 2026-06-12
 
 ### Corrections

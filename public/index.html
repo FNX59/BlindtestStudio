@@ -1819,18 +1819,23 @@ function canDownloadAudio(song) {
 }
 
 async function downloadYoutubeClip(song) {
-  const response = await fetch(AUDIO_EXTRACT_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      youtubeUrl: song.youtubeUrl,
-      query: `${song.artist || ''} ${song.title || ''}`.trim(),
-      start: song.start,
-      duration: song.duration,
-      artist: song.artist,
-      title: song.title
-    })
-  });
+  let response;
+  try {
+    response = await fetch(AUDIO_EXTRACT_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        youtubeUrl: song.youtubeUrl,
+        query: `${song.artist || ''} ${song.title || ''}`.trim(),
+        start: song.start,
+        duration: song.duration,
+        artist: song.artist,
+        title: song.title
+      })
+    });
+  } catch (error) {
+    throw new Error(`service local non joignable (${AUDIO_EXTRACT_API}). Lancez Lancer_BlindTest.bat puis réessayez.`);
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.ok || !data.dataUrl) {
     throw new Error(data.error || `Service audio indisponible (${response.status})`);

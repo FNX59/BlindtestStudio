@@ -7,7 +7,7 @@ const { spawn } = require('child_process');
 const PORT = Number(process.env.AUDIO_EXTRACT_PORT || 3478);
 const YTDLP_BIN = process.env.YTDLP_BIN || 'yt-dlp';
 const FFMPEG_BIN = process.env.FFMPEG_BIN || 'ffmpeg';
-const CACHE_DIR = process.env.AUDIO_EXTRACT_CACHE_DIR || path.join(__dirname, 'audio-cache');
+const CACHE_DIR = process.env.AUDIO_EXTRACT_CACHE_DIR || path.resolve(__dirname, '..', 'audio-cache-local');
 const MAX_DURATION = Number(process.env.AUDIO_EXTRACT_MAX_DURATION || 60);
 const YTDLP_JS_RUNTIME = process.env.YTDLP_JS_RUNTIME || (process.execPath ? `node:${process.execPath}` : '');
 

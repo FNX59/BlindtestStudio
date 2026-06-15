@@ -32,6 +32,6 @@ La page HTML utilise cette URL automatiquement. Pour changer l'adresse côté na
 localStorage.setItem('blindtestAudioExtractApi', 'http://localhost:3478/api/extract')
 ```
 
-Les fichiers temporaires et le cache sont stockés dans `audio-cache/`.
+Les fichiers temporaires et le cache sont stockés par défaut dans `../audio-cache-local/`, à la racine du projet.
 
 Le service ajoute automatiquement `--js-runtimes node:<node.exe>` à `yt-dlp`, ce qui évite les erreurs récentes de YouTube liées au runtime JavaScript manquant.
