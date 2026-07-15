@@ -230,6 +230,9 @@ td{padding:5px 4px}
       <div style="font-size:.72rem;color:rgba(255,255,255,.55);line-height:1.7">Donne un thème, le LLM choisi génère les chansons, liens YouTube et questions bonus.</div>
     </div>
   </div>
+  <div style="margin-top:24px;animation:slide-up .6s .18s ease both">
+    <button class="btn btn-cyan btn-md" onclick="loadBlindtestDraft()">↺ REPRENDRE LA SAUVEGARDE</button>
+  </div>
   <!-- INSTALL BUTTON (shown only when PWA installable or on mobile) -->
   <div id="home-install-wrap" style="display:block;margin-top:36px;animation:slide-up .6s .25s ease both">
     <div class="card" style="padding:20px 32px;text-align:center;border-color:rgba(0,255,136,.4);box-shadow:0 0 30px rgba(0,255,136,.15)">
@@ -287,9 +290,13 @@ td{padding:5px 4px}
       <div>
         <div style="font-family:'Boogaloo',cursive;font-size:1.65rem" class="nt-pink" id="manual-table-title">🎵 Thème</div>
         <div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.38);margin-top:3px;letter-spacing:2px" id="manual-sel-count">0 chanson(s) sélectionnée(s)</div>
+        <div style="font-family:'VT323',monospace;font-size:.92rem;color:rgba(0,255,136,.58);margin-top:2px;letter-spacing:1px" id="manual-save-status"></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-cyan btn-sm" onclick="saveBlindtestDraft('manual', true)">💾 SAUVEGARDER</button>
+        <button class="btn btn-yellow btn-sm" onclick="loadBlindtestDraft()">↺ RESTAURER</button>
         <button class="btn btn-green btn-sm" onclick="addManualRow()">+ LIGNE</button>
+        <button class="btn btn-yellow btn-sm" onclick="insertJingleRow('manual')">+ JINGLE</button>
         <button class="btn btn-pink btn-md" onclick="goToPresentation('manual')">▶ PRÉSENTATION →</button>
       </div>
     </div>
@@ -312,6 +319,8 @@ td{padding:5px 4px}
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;flex-wrap:wrap;gap:10px">
       <button class="btn btn-green btn-sm" onclick="addManualRow()">+ AJOUTER UNE LIGNE</button>
+      <button class="btn btn-yellow btn-sm" onclick="insertJingleRow('manual')">+ AJOUTER UN JINGLE</button>
+      <button class="btn btn-cyan btn-sm" onclick="saveBlindtestDraft('manual', true)">💾 SAUVEGARDER LE BLINDTEST</button>
       <button class="btn btn-pink btn-lg" onclick="goToPresentation('manual')">▶ LANCER LA PRÉSENTATION →</button>
     </div>
   </div>
@@ -415,9 +424,13 @@ td{padding:5px 4px}
       <div>
         <div style="font-family:'Boogaloo',cursive;font-size:1.6rem" class="nt-pink" id="auto-table-title">🎵 Thème</div>
         <div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.38);margin-top:3px;letter-spacing:2px" id="auto-sel-count">0 chanson(s)</div>
+        <div style="font-family:'VT323',monospace;font-size:.92rem;color:rgba(0,255,136,.58);margin-top:2px;letter-spacing:1px" id="auto-save-status"></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-cyan btn-sm" onclick="saveBlindtestDraft('auto', true)">💾 SAUVEGARDER</button>
+        <button class="btn btn-yellow btn-sm" onclick="loadBlindtestDraft()">↺ RESTAURER</button>
         <button class="btn btn-green btn-sm" onclick="addAutoRow()">+ LIGNE</button>
+        <button class="btn btn-yellow btn-sm" onclick="insertJingleRow('auto')">+ JINGLE</button>
         <button class="btn btn-yellow btn-sm" onclick="showScreen('screen-auto-cfg')">⚙ RECONFIGURER</button>
         <button class="btn btn-pink btn-md" onclick="goToPresentation('auto')">▶ PRÉSENTATION →</button>
       </div>
@@ -425,6 +438,8 @@ td{padding:5px 4px}
     <div id="auto-table-sections"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
       <button class="btn btn-green btn-sm" onclick="addAutoRow()">+ AJOUTER UNE LIGNE</button>
+      <button class="btn btn-yellow btn-sm" onclick="insertJingleRow('auto')">+ AJOUTER UN JINGLE</button>
+      <button class="btn btn-cyan btn-sm" onclick="saveBlindtestDraft('auto', true)">💾 SAUVEGARDER LE BLINDTEST</button>
       <button class="btn btn-pink btn-lg" onclick="goToPresentation('auto')">▶ LANCER LA PRÉSENTATION →</button>
     </div>
   </div>
@@ -502,6 +517,161 @@ let exportHtmlContent = '';
 let audioPlayer = new Audio();
 let audioCurrentIdx = null;
 const AUDIO_EXTRACT_API = localStorage.getItem('blindtestAudioExtractApi') || 'http://localhost:3478/api/extract';
+const JINGLE_TYPE = 'jingle';
+
+function isJingle(row) {
+  return row && row.type === JINGLE_TYPE;
+}
+
+function getJingleTitle(row) {
+  return (row && (row.title || row.jingleTitle || row.artist)) || 'JINGLE';
+}
+
+function countPlayableSongs(items) {
+  return items.filter(item => !isJingle(item)).length;
+}
+const BLINDTEST_DRAFT_KEY = 'blindtest_edit_draft_v1';
+let blindtestSaveTimer = null;
+
+function getEditingMode(fallback = 'manual') {
+  if (currentScreen.includes('auto')) return 'auto';
+  if (currentScreen.includes('manual')) return 'manual';
+  if (autoSongs.length) return 'auto';
+  return fallback;
+}
+
+function cloneSongsForDraft(songs) {
+  return songs.map(song => ({
+    id: song.id || Date.now() + Math.random(),
+    type: song.type || 'song',
+    selected: song.selected !== false,
+    artist: song.artist || '',
+    title: song.title || '',
+    youtubeUrl: song.youtubeUrl || '',
+    url: song.url || '',
+    start: song.start || '0:30',
+    duration: song.duration || '30',
+    bonus: song.bonus || '',
+    bonusAnswer: song.bonusAnswer || '',
+    bonusEnabled: song.bonusEnabled !== false,
+    justification: song.justification || '',
+    manche: song.manche || 1,
+    mp3Data: song.mp3Data || '',
+    mp3Name: song.mp3Name || '',
+    mp3FromYoutube: !!song.mp3FromYoutube,
+  }));
+}
+
+function getSafeAutoConfigForDraft() {
+  const cfg = { ...autoConfig };
+  if (cfg.llm) cfg.llm = { ...cfg.llm, apiKey: '' };
+  return cfg;
+}
+
+function buildBlindtestDraft(mode = getEditingMode()) {
+  return {
+    version: 1,
+    mode,
+    updatedAt: new Date().toISOString(),
+    manual: {
+      theme: document.getElementById('manual-theme')?.value || '',
+      count: parseInt(document.getElementById('manual-count')?.value, 10) || manualSongs.length || 10,
+      showAnswers: !!document.getElementById('manual-show-answers')?.checked,
+      songs: cloneSongsForDraft(manualSongs),
+    },
+    auto: {
+      config: getSafeAutoConfigForDraft(),
+      showAnswers: !!document.getElementById('auto-show-answers')?.checked,
+      songs: cloneSongsForDraft(autoSongs),
+    },
+  };
+}
+
+function showDraftStatus(mode, message, isError = false) {
+  const el = document.getElementById(`${mode}-save-status`);
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = isError ? '#ff5555' : 'rgba(0,255,136,.68)';
+  clearTimeout(showDraftStatus._timer);
+  showDraftStatus._timer = setTimeout(() => { el.textContent = ''; }, 3500);
+}
+
+function saveBlindtestDraft(mode = getEditingMode(), explicit = false) {
+  try {
+    const draft = buildBlindtestDraft(mode);
+    localStorage.setItem(BLINDTEST_DRAFT_KEY, JSON.stringify(draft));
+    const label = explicit ? 'Sauvegarde effectuée' : 'Sauvegarde automatique';
+    showDraftStatus(mode, `${label} · ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`);
+    return true;
+  } catch (e) {
+    const activeMode = mode || getEditingMode();
+    const quotaHint = e && (e.name === 'QuotaExceededError' || String(e.message || '').toLowerCase().includes('quota'))
+      ? ' Espace local insuffisant : retirez quelques MP3 intégrés ou exportez le HTML.'
+      : '';
+    showDraftStatus(activeMode, 'Sauvegarde impossible.' + quotaHint, true);
+    if (explicit) alert('Sauvegarde impossible.' + quotaHint);
+    return false;
+  }
+}
+
+function scheduleBlindtestDraftSave(mode = getEditingMode()) {
+  clearTimeout(blindtestSaveTimer);
+  blindtestSaveTimer = setTimeout(() => saveBlindtestDraft(mode, false), 700);
+}
+
+function getSavedBlindtestDraft() {
+  try {
+    return JSON.parse(localStorage.getItem(BLINDTEST_DRAFT_KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function applyManualDraft(data = {}) {
+  const theme = data.theme || '';
+  const songs = Array.isArray(data.songs) ? data.songs : [];
+  document.getElementById('manual-theme').value = theme;
+  document.getElementById('manual-count').value = data.count || songs.length || 10;
+  document.getElementById('manual-show-answers').checked = data.showAnswers !== false;
+  manualSongs = songs.length ? songs.map(row => ({ ...makeManualRow(row), selected: row.selected !== false, id: row.id || Date.now() + Math.random() })) : [];
+  document.getElementById('manual-table-title').textContent = '🎵 ' + (theme || 'Blindtest sauvegardé');
+  renderManualTable();
+  showScreen('screen-manual-table');
+  showDraftStatus('manual', 'Sauvegarde restaurée');
+}
+
+function applyAutoDraft(data = {}) {
+  const cfg = data.config || {};
+  autoConfig = { rounds: 3, spr: 5, duration: 30, bonus: true, comments: '', ...cfg };
+  const theme = autoConfig.theme || '';
+  if (document.getElementById('auto-theme')) document.getElementById('auto-theme').value = theme;
+  if (document.getElementById('auto-comments')) document.getElementById('auto-comments').value = autoConfig.comments || '';
+  if (document.getElementById('auto-rounds')) document.getElementById('auto-rounds').value = autoConfig.rounds || 3;
+  if (document.getElementById('auto-spr')) document.getElementById('auto-spr').value = autoConfig.spr || 5;
+  if (document.getElementById('auto-duration')) document.getElementById('auto-duration').value = autoConfig.duration || 30;
+  if (document.getElementById('auto-bonus')) document.getElementById('auto-bonus').checked = autoConfig.bonus !== false;
+  if (document.getElementById('auto-show-answers')) document.getElementById('auto-show-answers').checked = data.showAnswers !== false;
+  updateAutoInfo();
+  autoSongs = Array.isArray(data.songs) ? data.songs.map(row => ({
+    ...row,
+    id: row.id || Date.now() + Math.random(),
+    selected: row.selected !== false,
+    bonusEnabled: row.bonusEnabled !== false,
+    themeWarning: getThemeRelevanceWarning(row, theme),
+  })) : [];
+  document.getElementById('auto-table-title').textContent = '🎵 ' + (theme || 'Blindtest sauvegardé');
+  renderAutoTable();
+  showScreen('screen-auto-table');
+  showDraftStatus('auto', 'Sauvegarde restaurée');
+}
+
+function loadBlindtestDraft() {
+  const draft = getSavedBlindtestDraft();
+  if (!draft) { alert('Aucune sauvegarde locale trouvée.'); return; }
+  const mode = draft.mode === 'auto' ? 'auto' : 'manual';
+  if (mode === 'auto') applyAutoDraft(draft.auto || {});
+  else applyManualDraft(draft.manual || {});
+}
 
 // ================================================================
 // WEB AUDIO — Volume normalization + fade in / fade out (1.5 s)
@@ -619,10 +789,11 @@ function updateAutoInfo() {
 // ================================================================
 function makeManualRow(data = {}) {
   return {
-    id: Date.now() + Math.random(),
-    selected: true,
+    id: data.id || Date.now() + Math.random(),
+    type: data.type || 'song',
+    selected: data.selected !== false,
     artist: data.artist || '',
-    title: data.title || '',
+    title: data.title || data.jingleTitle || '',
     mp3Data: data.mp3Data || '',
     mp3Name: data.mp3Name || '',
     url: data.url || '',
@@ -630,6 +801,22 @@ function makeManualRow(data = {}) {
     duration: data.duration || '30',
     bonus: data.bonus || '',
     bonusAnswer: data.bonusAnswer || '',
+  };
+}
+
+function makeJingleRow(data = {}) {
+  return {
+    ...makeManualRow(data),
+    type: JINGLE_TYPE,
+    artist: '',
+    title: data.title || data.jingleTitle || 'JINGLE',
+    url: '',
+    youtubeUrl: '',
+    start: data.start || '0:00',
+    duration: data.duration || '8',
+    bonus: '',
+    bonusAnswer: '',
+    bonusEnabled: false,
   };
 }
 
@@ -641,6 +828,7 @@ function initManualTable() {
   document.getElementById('manual-table-title').textContent = '🎵 ' + theme;
   renderManualTable();
   showScreen('screen-manual-table');
+  scheduleBlindtestDraftSave('manual');
 }
 
 function renderManualTable() {
@@ -649,6 +837,19 @@ function renderManualTable() {
   manualSongs.forEach((row, i) => {
     const tr = document.createElement('tr');
     tr.style.background = row.selected ? 'rgba(0,245,255,.02)' : 'transparent';
+    if (isJingle(row)) {
+      tr.innerHTML = `
+      <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected ? 'checked' : ''} data-idx="${i}" data-field="selected" onchange="updateManualRow(parseInt(this.dataset.idx),'selected',this.checked)"></td>
+      <td colspan="2"><input class="cell-inp" value="${escHtml(getJingleTitle(row))}" placeholder="Titre du jingle" data-idx="${i}" data-field="title" onchange="updateManualRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
+      ${buildMp3Cell('manual', i, row)}
+      <td><div style="font-family:'Press Start 2P',monospace;font-size:.42rem;color:var(--yellow);letter-spacing:1px;padding:7px 8px">VIGNETTE JINGLE</div></td>
+      <td><input class="cell-inp" value="${escHtml(row.start)}" placeholder="0:00" data-idx="${i}" data-field="start" onchange="updateManualRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
+      <td><input class="cell-inp" value="${escHtml(row.duration)}" placeholder="8" data-idx="${i}" data-field="duration" onchange="updateManualRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
+      <td colspan="2"><div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.42);letter-spacing:1px;padding:4px 8px">Ne compte pas comme chanson</div></td>
+      <td><button class="del-btn" data-idx="${i}" onclick="deleteManualRow(parseInt(this.dataset.idx))">✕</button></td>`;
+      tbody.appendChild(tr);
+      return;
+    }
     tr.innerHTML = `
       <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected ? 'checked' : ''} data-idx="${i}" data-field="selected" onchange="updateManualRow(parseInt(this.dataset.idx),'selected',this.checked)"></td>
       ${['artist','title'].map(f => `
@@ -671,8 +872,10 @@ function renderManualTable() {
 }
 
 function updateManualRow(i, field, val) {
+  if (!manualSongs[i]) return;
   manualSongs[i][field] = (field === 'selected') ? val : val;
   if (field === 'selected') updateManualCount();
+  scheduleBlindtestDraftSave('manual');
 }
 
 // ----------------------------------------------------------------
@@ -759,18 +962,47 @@ async function onYoutubeUrlChange(mode, i, url) {
 }
 
 function updateManualCount() {
-  const sel = manualSongs.filter(s => s.selected).length;
-  document.getElementById('manual-sel-count').textContent = `${sel} chanson(s) sélectionnée(s)`;
+  const sel = manualSongs.filter(s => s.selected && !isJingle(s)).length;
+  const jingles = manualSongs.filter(s => s.selected && isJingle(s)).length;
+  document.getElementById('manual-sel-count').textContent = `${sel} chanson(s) sélectionnée(s)${jingles ? ` · ${jingles} jingle(s)` : ''}`;
 }
 
 function addManualRow() {
   manualSongs.push(makeManualRow());
   renderManualTable();
+  scheduleBlindtestDraftSave('manual');
 }
 
 function deleteManualRow(i) {
   manualSongs.splice(i, 1);
   renderManualTable();
+  scheduleBlindtestDraftSave('manual');
+}
+
+function askInsertionPosition(mode) {
+  const rows = getSongCollection(mode);
+  const raw = prompt(`Insérer le jingle en quelle position ? (1 à ${rows.length + 1})`, String(rows.length + 1));
+  if (raw === null) return null;
+  const position = parseInt(raw, 10);
+  if (!Number.isInteger(position) || position < 1 || position > rows.length + 1) {
+    alert(`Veuillez choisir une position entre 1 et ${rows.length + 1}.`);
+    return null;
+  }
+  return position - 1;
+}
+
+function insertJingleRow(mode) {
+  const index = askInsertionPosition(mode);
+  if (index === null) return;
+  const title = prompt('Titre de la vignette jingle', 'JINGLE');
+  if (title === null) return;
+  const rows = getSongCollection(mode);
+  const previous = rows[index - 1];
+  const next = rows[index];
+  const jingle = makeJingleRow({ title: title.trim() || 'JINGLE', manche: previous?.manche || next?.manche || 1 });
+  rows.splice(index, 0, jingle);
+  mode === 'manual' ? renderManualTable() : renderAutoTable();
+  scheduleBlindtestDraftSave(mode);
 }
 
 function escHtml(s) {
@@ -808,6 +1040,7 @@ function handleMp3Upload(mode, i, file) {
     songs[i].mp3Data = String(reader.result || '');
     songs[i].mp3Name = file.name;
     mode === 'manual' ? renderManualTable() : renderAutoTable();
+    scheduleBlindtestDraftSave(mode);
   };
   reader.onerror = () => alert('Impossible de lire ce fichier MP3.');
   reader.readAsDataURL(file);
@@ -819,6 +1052,7 @@ function removeMp3(mode, i) {
   songs[i].mp3Data = '';
   songs[i].mp3Name = '';
   mode === 'manual' ? renderManualTable() : renderAutoTable();
+  scheduleBlindtestDraftSave(mode);
 }
 
 // ================================================================
@@ -1555,6 +1789,7 @@ Génère exactement ${spr} objets.`;
     document.getElementById('auto-table-title').textContent = '🎵 ' + theme;
     renderAutoTable();
     showScreen('screen-auto-table');
+    scheduleBlindtestDraftSave('auto');
   } catch (e) {
     showErr(`Erreur ${llmCfg.label} (Manche en cours) : ${explainNetworkError(e, llmCfg)}. Vérifiez la clé API, le modèle et l'URL. (Total généré: ${allParsed.length}/${total})`);
   } finally {
@@ -1620,6 +1855,19 @@ function renderAutoTable() {
 
 function buildAutoRow(row) {
   const i = row._i;
+  if (isJingle(row)) {
+    return `<tr style="border-bottom:1px solid rgba(255,230,0,.14);background:rgba(255,230,0,.035)">
+    <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected?'checked':''} data-idx="${i}" data-field="selected" onchange="updateAutoRow(parseInt(this.dataset.idx),'selected',this.checked)"></td>
+    <td colspan="3"><input class="cell-inp" value="${escHtml(getJingleTitle(row))}" data-idx="${i}" data-field="title" placeholder="Titre du jingle" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
+    ${buildMp3Cell('auto', i, row)}
+    <td><div style="font-family:'Press Start 2P',monospace;font-size:.42rem;color:var(--yellow);letter-spacing:1px;padding:7px 8px">VIGNETTE JINGLE</div></td>
+    <td><input class="cell-inp" value="${escHtml(row.start)}" data-idx="${i}" data-field="start" placeholder="0:00" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
+    <td><input class="cell-inp" value="${escHtml(row.duration)}" data-idx="${i}" data-field="duration" placeholder="8" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
+    <td colspan="3"><div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.42);letter-spacing:1px;padding:4px 8px">Ne compte pas comme chanson</div></td>
+    <td><span style="opacity:.25">—</span></td>
+    <td><button class="del-btn" data-idx="${i}" onclick="deleteAutoRow(parseInt(this.dataset.idx))">✕</button></td>
+  </tr>`;
+  }
   const bonusEnabled = row.bonusEnabled !== false;
   const bonusCells = `
     <td style="text-align:center"><input type="checkbox" class="check-cb" ${bonusEnabled?'checked':''} data-idx="${i}" data-field="bonusEnabled" onchange="updateAutoRow(parseInt(this.dataset.idx),'bonusEnabled',this.checked)"></td>
@@ -1654,6 +1902,7 @@ function buildAutoRow(row) {
 }
 
 function updateAutoRow(i, field, val) {
+  if (!autoSongs[i]) return;
   autoSongs[i][field] = val;
   let shouldRender = false;
   if (['artist', 'title', 'justification'].includes(field)) {
@@ -1663,11 +1912,13 @@ function updateAutoRow(i, field, val) {
   if (field === 'selected') updateAutoCount();
   if (field === 'bonusEnabled') shouldRender = true;
   if (shouldRender) renderAutoTable();
+  scheduleBlindtestDraftSave('auto');
 }
 
 function updateAutoCount() {
-  const sel = autoSongs.filter(s => s.selected).length;
-  document.getElementById('auto-sel-count').textContent = `${sel} chanson(s) · ${autoConfig.rounds} manche(s)`;
+  const sel = autoSongs.filter(s => s.selected && !isJingle(s)).length;
+  const jingles = autoSongs.filter(s => s.selected && isJingle(s)).length;
+  document.getElementById('auto-sel-count').textContent = `${sel} chanson(s)${jingles ? ` · ${jingles} jingle(s)` : ''} · ${autoConfig.rounds} manche(s)`;
 }
 
 function askAutoManche() {
@@ -1696,11 +1947,13 @@ function addAutoRow(manche = null) {
     manche: targetManche,
   });
   renderAutoTable();
+  scheduleBlindtestDraftSave('auto');
 }
 
 function deleteAutoRow(i) {
   autoSongs.splice(i, 1);
   renderAutoTable();
+  scheduleBlindtestDraftSave('auto');
 }
 
 async function revokeSong(i) {
@@ -1735,6 +1988,7 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) :
     autoSongs[i] = { ...newSong, id: Date.now() + Math.random(), selected: true, bonusEnabled: song.bonusEnabled !== false, mp3Data: '', mp3Name: '' };
     autoSongs[i].themeWarning = getThemeRelevanceWarning(autoSongs[i], autoConfig.theme || '');
     renderAutoTable();
+    scheduleBlindtestDraftSave('auto');
   } catch (e) {
     alert(`Erreur remplacement : ${explainNetworkError(e, autoConfig.llm || getLlmConfig())}`);
     if (btn) { btn.disabled = false; btn.textContent = '🔄'; }
@@ -1815,6 +2069,7 @@ function addPrepLine(icon, text, color = 'rgba(255,255,255,.62)') {
 }
 
 function canDownloadAudio(song) {
+  if (isJingle(song)) return false;
   return !!((song.youtubeUrl && String(song.youtubeUrl).trim()) || (song.artist && song.title));
 }
 
@@ -1857,7 +2112,7 @@ async function prepareAudioBeforePresentation(songs) {
 
   let done = 0;
   for (const song of songs) {
-    const label = `${song.artist} - ${song.title}`;
+    const label = isJingle(song) ? `Jingle - ${getJingleTitle(song)}` : `${song.artist} - ${song.title}`;
     if (song.mp3Data) {
       addPrepLine('…', `Préchargement MP3 : ${label}`, 'var(--cyan)');
       const ok = await preloadMp3(song.mp3Data, song.mp3FromYoutube ? 0 : parseTimeToSec(song.start));
@@ -1879,6 +2134,8 @@ async function prepareAudioBeforePresentation(songs) {
         addPrepLine('✕', `Service audio indisponible pour : ${label} — ${error.message}`, '#ff5555');
         song._audioError = true;
       }
+    } else if (isJingle(song)) {
+      addPrepLine('•', `Vignette jingle sans audio : ${label}`, 'rgba(255,255,255,.45)');
     } else {
       addPrepLine('!', `Aucune source audio : ${label}`, '#ff5555');
     }
@@ -1992,7 +2249,7 @@ function togglePlay(idx) {
   }
 
   if (!vid) {
-    alert('Ajoutez un MP3 ou un lien YouTube valide pour cette chanson.');
+    alert(isJingle(slide) ? 'Ajoutez un MP3 pour cette vignette jingle.' : 'Ajoutez un MP3 ou un lien YouTube valide pour cette chanson.');
     return;
   }
 
@@ -2057,7 +2314,7 @@ function updateAnswerVisibility() {
   document.querySelectorAll('[data-answer-idx]').forEach(el => {
     const idx = parseInt(el.dataset.answerIdx, 10);
     const song = presSlides[idx];
-    if (!song) return;
+    if (!song || isJingle(song)) return;
     const visible = answerVisibility[idx] !== false;
     const artistEl = el.querySelector('.pres-artist');
     const titleEl = el.querySelector('.pres-title');
@@ -2081,26 +2338,26 @@ function toggleAnswersVisible() {
 }
 
 function toggleSingleAnswer(idx) {
-  if (!presSlides[idx]) return;
+  if (!presSlides[idx] || isJingle(presSlides[idx])) return;
   answerVisibility[idx] = !(answerVisibility[idx] !== false);
   updateAnswerVisibility();
 }
 
 async function goToPresentation(mode) {
   const rawSongs = mode === 'manual'
-    ? manualSongs.filter(s => s.selected && s.artist && s.title)
-    : autoSongs.filter(s => s.selected && s.artist && s.title);
+    ? manualSongs.filter(s => s.selected && (isJingle(s) ? getJingleTitle(s).trim() : (s.artist && s.title)))
+    : autoSongs.filter(s => s.selected && (isJingle(s) ? getJingleTitle(s).trim() : (s.artist && s.title)));
   const songs = rawSongs.map(s => ({
     ...s,
     __source: s,
-    youtubeUrl: s.youtubeUrl || s.url || '',
+    youtubeUrl: isJingle(s) ? '' : (s.youtubeUrl || s.url || ''),
     mp3Data: s.mp3Data || '',
     mp3Name: s.mp3Name || '',
     mp3FromYoutube: !!s.mp3FromYoutube,
   }));
 
   if (songs.length === 0) {
-    alert('Ajoutez au moins une chanson avec artiste et titre !');
+    alert('Ajoutez au moins une chanson avec artiste et titre, ou une vignette jingle !');
     return;
   }
 
@@ -2122,6 +2379,7 @@ async function goToPresentation(mode) {
 function buildPresentation(theme, songs) {
   const container = document.getElementById('pres-slides-container');
   container.innerHTML = '';
+  const songTotal = countPlayableSongs(songs);
 
   // INTRO
   const intro = document.createElement('div');
@@ -2132,7 +2390,7 @@ function buildPresentation(theme, songs) {
       <div style="font-family:'Press Start 2P',monospace;font-size:.65rem;letter-spacing:5px;margin-bottom:14px" class="nt-cyan">🎵 BIENVENUE AU 🎵</div>
       <div style="font-family:'Boogaloo',cursive;font-size:clamp(2rem,6vw,4.5rem);line-height:1.1;margin-bottom:8px" class="nt-yellow">${escHtml(theme.toUpperCase())}</div>
       <div style="font-family:'Boogaloo',cursive;font-size:clamp(1.5rem,4vw,2.8rem)" class="nt-pink">BLINDTEST</div>
-      <div style="font-family:'Orbitron',sans-serif;font-size:.85rem;color:rgba(255,255,255,.35);margin:22px 0 34px;letter-spacing:1px">${songs.length} chanson${songs.length > 1 ? 's' : ''} à deviner !</div>
+      <div style="font-family:'Orbitron',sans-serif;font-size:.85rem;color:rgba(255,255,255,.35);margin:22px 0 34px;letter-spacing:1px">${songTotal} chanson${songTotal > 1 ? 's' : ''} à deviner !</div>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
         <button class="btn btn-cyan btn-md" id="pres-answer-toggle" onclick="toggleAnswersVisible()">👁 RÉVÉLER ARTISTE / TITRE</button>
         <button class="btn btn-pink btn-lg" style="animation:pulse-pink 2s infinite" onclick="presNavigate(1)">▶ DÉMARRER</button>
@@ -2140,15 +2398,37 @@ function buildPresentation(theme, songs) {
     </div>`;
   container.appendChild(intro);
 
-  // SONGS
+  let songOrdinal = 0;
   songs.forEach((song, i) => {
-    const hasBonus = song.bonusEnabled !== false && song.bonus && song.bonus.trim();
     const div = document.createElement('div');
     div.className = 'pres-slide';
     div.id = `pres-slide-${i}`;
+
+    if (isJingle(song)) {
+      div.dataset.jingle = 'true';
+      div.innerHTML = `
+      <div class="pres-song-card" style="text-align:center;border-color:rgba(255,230,0,.55);box-shadow:0 0 42px rgba(255,230,0,.18),inset 0 0 25px rgba(0,0,0,.35)">
+        <div class="pres-song-num nt-yellow">VIGNETTE JINGLE</div>
+        <div style="font-family:'Boogaloo',cursive;font-size:clamp(2.4rem,7vw,5rem);line-height:1.05;margin:20px 0 28px" class="nt-pink">${escHtml(getJingleTitle(song))}</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:6px;flex-wrap:wrap">
+          <button class="pres-play-btn" id="pres-play-${i}" onclick="togglePlay(${i})">▶</button>
+          <div style="font-family:'VT323',monospace;font-size:1rem;color:rgba(255,255,255,.38);letter-spacing:2px">
+            ${song.mp3Data ? '🎵 JINGLE MP3' : 'ℹ VIGNETTE SANS AUDIO'}
+            ${song.start ? ` · Début: ${song.start}` : ''}
+            ${song.duration ? ` · ${song.duration}s` : ''}
+          </div>
+        </div>
+      </div>`;
+      container.appendChild(div);
+      return;
+    }
+
+    songOrdinal++;
+    div.dataset.songOrdinal = String(songOrdinal);
+    const hasBonus = song.bonusEnabled !== false && song.bonus && song.bonus.trim();
     div.innerHTML = `
       <div class="pres-song-card" data-answer-idx="${i}">
-        <div class="pres-song-num">CHANSON ${i + 1} / ${songs.length}</div>
+        <div class="pres-song-num">CHANSON ${songOrdinal} / ${songTotal}</div>
         ${renderAnswerBlock(song, i)}
         <button class="btn btn-cyan btn-sm" style="margin:0 0 20px" data-answer-toggle-idx="${i}" onclick="toggleSingleAnswer(${i})">👁 / 🙈 ARTISTE-TITRE</button>
         ${hasBonus ? `
@@ -2189,7 +2469,6 @@ function buildPresentation(theme, songs) {
   container.appendChild(outro);
   updateAnswerVisibility();
 }
-
 function revealAnswer(id, btn) {
   const el = document.getElementById(id);
   if (el) el.classList.add('shown');
@@ -2230,9 +2509,10 @@ function presNavigate(dir) {
 
   // Counter
   const counter = document.getElementById('pres-counter');
-  if (absIdx === 0) counter.textContent = '';
-  else if (absIdx === maxIdx) counter.textContent = '';
-  else counter.textContent = `${absIdx} / ${presSlides.length}`;
+  const activeSlide = slides[absIdx];
+  if (absIdx === 0 || absIdx === maxIdx) counter.textContent = '';
+  else if (activeSlide?.dataset.jingle === 'true') counter.textContent = 'JINGLE';
+  else counter.textContent = `${activeSlide?.dataset.songOrdinal || absIdx} / ${countPlayableSongs(presSlides)}`;
 
   // Nav btns
   document.getElementById('pres-prev').disabled = absIdx === 0;
@@ -2267,7 +2547,7 @@ document.addEventListener('keydown', e => {
 // ================================================================
 function openExportModal() {
   exportHtmlContent = generateExportHTML();
-  const missingMp3 = presSlides.filter(s => !s.mp3Data).length;
+  const missingMp3 = presSlides.filter(s => !isJingle(s) && !s.mp3Data).length;
   if (missingMp3) {
     alert(`${missingMp3} chanson(s) n'ont pas de MP3 intégré. L'export restera autonome et hors réseau, mais ces extraits ne seront pas lisibles.`);
   }
@@ -2300,6 +2580,7 @@ function generateExportHTML() {
   const exportedAnswersVisible = getShowAnswersSetting(mode);
 
   const slidesData = JSON.stringify(songs.map(s => ({
+    type: s.type || 'song',
     artist: s.artist, title: s.title,
     mp3Data: s.mp3Data || '',
     mp3Name: s.mp3Name || '',
@@ -2372,7 +2653,9 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 <script>
 const theme=${JSON.stringify(theme)};
 const songs=${slidesData};
-let cur=0,audio=new Audio(),audioIdx=null,answersVisible=${JSON.stringify(exportedAnswersVisible)},answerVisibility=songs.map(()=>answersVisible);
+const isJingle=s=>s&&s.type==='jingle';
+const countSongs=items=>items.filter(s=>!isJingle(s)).length;
+let cur=0,audio=new Audio(),audioIdx=null,answersVisible=${JSON.stringify(exportedAnswersVisible)},answerVisibility=songs.map(s=>isJingle(s)?true:answersVisible);
 let audioCtx=null,masterGain=null,compressor=null,audioSource=null;
 const NORMALIZED_OUTPUT_GAIN=.9;
 function getAudioCtx(){
@@ -2407,16 +2690,34 @@ function build(){
     <div style="font-family:'Courier New',monospace;font-weight:700;font-size:.65rem;letter-spacing:5px;color:#00f5ff;margin-bottom:14px">🎵 BIENVENUE AU 🎵</div>
     <div style="font-family:'Trebuchet MS',system-ui,sans-serif;font-weight:700;font-size:clamp(2rem,6vw,4.5rem);color:#ffe600;text-shadow:0 0 15px #ffe600;line-height:1.1;margin-bottom:8px">\${theme.toUpperCase()}</div>
     <div style="font-family:'Trebuchet MS',system-ui,sans-serif;font-weight:700;font-size:clamp(1.5rem,4vw,2.8rem);color:#ff2d78;text-shadow:0 0 12px #ff2d78">BLINDTEST</div>
-    <div style="font-size:.85rem;color:rgba(255,255,255,.35);margin:22px 0 34px">\${songs.length} chanson\${songs.length>1?'s':''} à deviner !</div>
+    <div style="font-size:.85rem;color:rgba(255,255,255,.35);margin:22px 0 34px">\${countSongs(songs)} chanson\${countSongs(songs)>1?'s':''} à deviner !</div>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <button class="btn btn-c" id="answerToggle" onclick="toggleAnswersVisible()">👁 RÉVÉLER ARTISTE / TITRE</button>
       <button class="btn btn-p" style="animation:pulse 2s infinite" onclick="nav(1)">▶ DÉMARRER</button>
     </div>
   </div>\`;
+  let songOrdinal=0;
+  const songTotal=countSongs(songs);
   songs.forEach((s,i)=>{
+    if(isJingle(s)){
+      c.innerHTML+=\`<div class="slide card song-card" id="s-\${i+1}" data-jingle="true" style="text-align:center;border-color:rgba(255,230,0,.55);box-shadow:0 0 42px rgba(255,230,0,.18)">
+      <div style="font-family:'Courier New',monospace;font-weight:700;font-size:.58rem;color:#ffe600;letter-spacing:3px;margin-bottom:18px;text-shadow:0 0 8px #ffe600">VIGNETTE JINGLE</div>
+      <div style="font-family:'Trebuchet MS',system-ui,sans-serif;font-weight:700;font-size:clamp(2.4rem,7vw,5rem);color:#ff2d78;text-shadow:0 0 15px #ff2d78;line-height:1.05;margin:20px 0 28px">\${s.title||'JINGLE'}</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:6px;flex-wrap:wrap">
+        <button class="play-btn" id="pb-\${i}" onclick="togglePlay(\${i})">▶</button>
+        <div style="font-family:'Courier New',monospace;font-size:1rem;color:rgba(255,255,255,.38);letter-spacing:2px">
+          \${s.mp3Data?'🎵 JINGLE MP3':'ℹ VIGNETTE SANS AUDIO'}
+          \${s.start?' · Début: '+s.start:''}
+          \${s.duration?' · '+s.duration+'s':''}
+        </div>
+      </div>
+    </div>\`;
+      return;
+    }
+    songOrdinal++;
     const hb=s.bonus&&s.bonus.trim();
-    c.innerHTML+=\`<div class="slide card song-card" id="s-\${i+1}" data-answer-idx="\${i}">
-      <div style="font-family:'Courier New',monospace;font-weight:700;font-size:.58rem;color:#00f5ff;letter-spacing:3px;margin-bottom:18px;text-shadow:0 0 8px #00f5ff">CHANSON \${i+1} / \${songs.length}</div>
+    c.innerHTML+=\`<div class="slide card song-card" id="s-\${i+1}" data-answer-idx="\${i}" data-song-ordinal="\${songOrdinal}">
+      <div style="font-family:'Courier New',monospace;font-weight:700;font-size:.58rem;color:#00f5ff;letter-spacing:3px;margin-bottom:18px;text-shadow:0 0 8px #00f5ff">CHANSON \${songOrdinal} / \${songTotal}</div>
       <div class="answer-artist" style="font-family:'Trebuchet MS',system-ui,sans-serif;font-weight:700;font-size:clamp(2rem,5vw,3.5rem);color:#ff2d78;text-shadow:0 0 15px #ff2d78;line-height:1.1;margin-bottom:8px"></div>
       <div class="answer-title" style="font-family:Impact,'Arial Black',system-ui,sans-serif;font-weight:700;font-size:clamp(1.1rem,2.5vw,1.9rem);color:#ffe600;text-shadow:0 0 12px #ffe600;margin-bottom:18px"></div>
       <button class="btn btn-c" style="margin:0 0 20px" data-answer-toggle-idx="\${i}" onclick="toggleSingleAnswer(\${i})">👁 / 🙈 ARTISTE-TITRE</button>
@@ -2457,8 +2758,8 @@ function updateAnswerVisibility(){
     if(b)b.textContent=v?'🙈 CACHER ARTISTE / TITRE':'👁 RÉVÉLER ARTISTE / TITRE';
   });
 }
-function toggleAnswersVisible(){answersVisible=!answersVisible;answerVisibility=songs.map(()=>answersVisible);updateAnswerVisibility()}
-function toggleSingleAnswer(i){if(!songs[i])return;answerVisibility[i]=!(answerVisibility[i]!==false);updateAnswerVisibility()}
+function toggleAnswersVisible(){answersVisible=!answersVisible;answerVisibility=songs.map(s=>isJingle(s)?true:answersVisible);updateAnswerVisibility()}
+function toggleSingleAnswer(i){if(!songs[i]||isJingle(songs[i]))return;answerVisibility[i]=!(answerVisibility[i]!==false);updateAnswerVisibility()}
 function nav(d){
   const all=document.querySelectorAll('.slide');
   stopAudio();
@@ -2472,7 +2773,8 @@ function updateNav(){
   document.getElementById('btnP').disabled=cur===0;
   document.getElementById('btnN').disabled=cur===total-1;
   const ctr=document.getElementById('ctr');
-  ctr.textContent=(cur>0&&cur<total-1)?\`\${cur} / \${songs.length}\`:'';
+  const active=document.querySelectorAll('.slide')[cur];
+  ctr.textContent=(cur<=0||cur>=total-1)?'':(active?.dataset.jingle==='true'?'JINGLE':\`\${active?.dataset.songOrdinal||cur} / \${countSongs(songs)}\`);
 }
 function reveal(id,btn){const el=document.getElementById(id);if(el)el.classList.add('shown');if(btn){btn.disabled=true;btn.style.opacity='.4'}}
 function stopAudio(){audio.pause();audioIdx=null;clearTimeout(window._at);document.querySelectorAll('.play-btn').forEach(b=>{b.textContent='▶';b.classList.remove('playing')})}
@@ -2498,7 +2800,7 @@ function togglePlay(i){
     if(mp3Start>0){audio.addEventListener('loadedmetadata',doPlay,{once:true});audio.load();}else{doPlay();}
     return;
   }
-  alert('Aucun extrait MP3 intégré pour cette chanson. Le fichier reste hors réseau.');
+  alert(isJingle(s)?'Aucun MP3 intégré pour cette vignette jingle.':'Aucun extrait MP3 intégré pour cette chanson. Le fichier reste hors réseau.');
 }
 document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();nav(1)}if(e.key==='ArrowLeft'){e.preventDefault();nav(-1)}});
 build();
