@@ -374,6 +374,7 @@ td{padding:5px 4px}
         <input class="inp" id="auto-apikey" type="password" placeholder="Clé API du fournisseur choisi">
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
           <button class="btn btn-cyan btn-sm" id="auto-test-btn" onclick="testLlmConnection()">TESTER</button>
+          <button class="btn btn-yellow btn-sm" id="auto-refresh-models-btn" onclick="refreshLlmModelsFromButton()">MAJ MODELES</button>
           <button class="btn btn-green btn-sm" id="auto-save-key-btn" onclick="saveLlmSettings()">ENREGISTRER</button>
         </div>
         <div id="auto-provider-help" style="font-size:.62rem;color:rgba(255,230,0,.45);margin-top:6px;font-family:'Orbitron',sans-serif">API Albert sélectionné par défaut. Les appels transitent via le worker n8n. Renseignez l'URL du worker ci-dessus.</div>
@@ -1061,11 +1062,11 @@ function removeMp3(mode, i) {
 const LLM_PROVIDERS = {
   mistral: {
     label: 'Mistral',
-    model: 'mistral-small-latest',
-    models: ['mistral-small-latest', 'mistral-medium-latest', 'mistral-large-latest', 'codestral-latest'],
+    model: 'mistral-small-2603',
+    models: ['mistral-small-2603', 'mistral-medium-2604', 'mistral-large-2512', 'ministral-8b-2512', 'ministral-14b-2512'],
     url: 'https://api.mistral.ai/v1/chat/completions',
     mode: 'openai',
-    help: "Utilise l'API Mistral avec authentification Bearer. Si le navigateur bloque CORS ou si vous voulez masquer la clé, configurez un worker personnalisé facultatif."
+    help: "Utilise l'API Mistral avec authentification Bearer. Liste de secours alignée sur les modèles actuels; utilisez MAJ MODELES pour vérifier l'accès réel de votre clé."
   },
   perplexity: {
     label: 'Perplexity',
@@ -1073,31 +1074,31 @@ const LLM_PROVIDERS = {
     models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro', 'sonar-deep-research'],
     url: 'https://api.perplexity.ai/chat/completions',
     mode: 'openai',
-    help: "Utilise l'API Perplexity Chat Completions avec authentification Bearer. Si le navigateur bloque CORS ou si vous voulez masquer la clé, configurez un worker personnalisé facultatif."
+    help: "Utilise l'API Perplexity Sonar compatible Chat Completions. Utilisez MAJ MODELES pour vérifier les modèles réellement disponibles sur votre compte."
   },
   claude: {
     label: 'Claude AI',
     model: 'claude-haiku-4-5-20251001',
-    models: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-6'],
+    models: ['claude-haiku-4-5-20251001', 'claude-sonnet-5', 'claude-opus-4-8', 'claude-fable-5'],
     url: 'https://api.anthropic.com/v1/messages',
     mode: 'anthropic',
-    help: "Utilise l'API Anthropic Messages avec en-tête x-api-key. Si le navigateur bloque CORS ou si vous voulez masquer la clé, configurez un worker personnalisé facultatif."
+    help: "Utilise l'API Anthropic Messages avec en-tête x-api-key. Haiku reste le choix rapide; Sonnet/Opus/Fable sont proposés si votre compte y a accès."
   },
   gemini: {
     label: 'Gemini',
-    model: 'gemini-2.0-flash',
-    models: ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+    model: 'gemini-2.5-flash',
+    models: ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'],
     url: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
     mode: 'gemini',
-    help: 'Utilise Google AI Studio. Si le navigateur bloque CORS ou si vous voulez masquer la clé, configurez un worker personnalisé facultatif.'
+    help: 'Utilise Google AI Studio. Gemini 2.5 Flash est le choix recommandé pour un bon équilibre coût/vitesse/qualité.'
   },
   openai: {
     label: 'ChatGPT',
-    model: 'gpt-4o-mini',
-    models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'],
+    model: 'gpt-4.1-mini',
+    models: ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini', 'gpt-4o'],
     url: 'https://api.openai.com/v1/chat/completions',
     mode: 'openai',
-    help: "Utilise l'API OpenAI Chat Completions avec authentification Bearer. Si le navigateur bloque CORS ou si vous voulez masquer la clé, configurez un worker personnalisé facultatif."
+    help: "Utilise l'API OpenAI Chat Completions avec authentification Bearer. Cette famille garde des modèles compatibles avec le format Chat Completions utilisé par l'application."
   },
   albert: {
     label: 'API Albert',
@@ -1125,6 +1126,7 @@ const LLM_PROVIDERS = {
 };
 
 const LLM_STORAGE_PREFIX = 'blindtest_llm_';
+const LLM_MODEL_CACHE_PREFIX = 'blindtest_llm_models_';
 let llmModelAccess = {};
 
 function getSavedLlmSettings(providerId) {
@@ -1141,7 +1143,8 @@ function setLlmStatus(msg, type = 'info') {
   const colors = {
     info: 'rgba(0,245,255,.75)',
     success: 'var(--green)',
-    error: '#ff5555'
+    error: '#ff5555',
+    warning: 'var(--yellow)'
   };
   el.textContent = msg;
   el.style.color = colors[type] || colors.info;
@@ -1179,6 +1182,101 @@ function getModelListUrl(cfg) {
 function getDefaultModel(providerId) {
   const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
   return provider.model || provider.models?.[0] || '';
+}
+
+function normalizeModelId(model) {
+  return String(model || '').trim().toLowerCase();
+}
+
+function uniqueModelList(...groups) {
+  const seen = new Set();
+  const out = [];
+  groups.flat().filter(Boolean).forEach(model => {
+    const key = normalizeModelId(model);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(String(model));
+  });
+  return out;
+}
+
+function getCachedModelSnapshot(providerId) {
+  try {
+    return JSON.parse(localStorage.getItem(LLM_MODEL_CACHE_PREFIX + providerId) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveModelSnapshot(providerId, models) {
+  localStorage.setItem(LLM_MODEL_CACHE_PREFIX + providerId, JSON.stringify({
+    checkedAt: new Date().toISOString(),
+    models: uniqueModelList(models)
+  }));
+}
+
+function summarizeModelUpdate(providerId, apiModels) {
+  const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
+  const fallback = uniqueModelList(provider.models || []);
+  const api = uniqueModelList(apiModels || []);
+  if (!api.length) return 'Aucune liste distante exploitable; liste de secours utilisée.';
+
+  const apiKeys = new Set(api.map(normalizeModelId));
+  const fallbackKeys = new Set(fallback.map(normalizeModelId));
+  const newModels = api.filter(model => !fallbackKeys.has(normalizeModelId(model)));
+  const missingFallback = fallback.filter(model => !apiKeys.has(normalizeModelId(model)));
+  const parts = [`${api.length} modèle(s) disponible(s) vérifié(s)`];
+  if (newModels.length) parts.push(`${newModels.length} nouveau(x): ${newModels.slice(0, 3).join(', ')}${newModels.length > 3 ? '...' : ''}`);
+  if (missingFallback.length) parts.push(`${missingFallback.length} préconfiguré(s) non exposé(s): ${missingFallback.slice(0, 3).join(', ')}${missingFallback.length > 3 ? '...' : ''}`);
+  return parts.join(' · ');
+}
+
+function pickModel(providerId, availableModels, preferredModel = '') {
+  const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
+  const allModels = uniqueModelList(availableModels, provider.models || []);
+  const availableKeys = new Set((availableModels || []).map(normalizeModelId));
+  const preferred = String(preferredModel || '').trim();
+  if (preferred && (!availableModels?.length || availableKeys.has(normalizeModelId(preferred)))) return preferred;
+  if (provider.model && (!availableModels?.length || availableKeys.has(normalizeModelId(provider.model)))) return provider.model;
+  return availableModels?.[0] || allModels[0] || provider.model || '';
+}
+
+async function refreshLlmModels(options = {}) {
+  const currentCfg = options.cfg || getLlmConfig();
+  const saved = getSavedLlmSettings(currentCfg.id);
+  const preferredModel = options.preferredModel || saved.model || currentCfg.model || getDefaultModel(currentCfg.id);
+  const cfg = { ...currentCfg, model: preferredModel };
+  const btn = document.getElementById('auto-refresh-models-btn');
+  if (cfg.id === 'custom') {
+    enableModelChoice(cfg.id, [], preferredModel);
+    if (!options.silent) setLlmStatus('LLM personnalisé: saisissez le modèle manuellement.', 'info');
+    return { models: [], source: 'manual', summary: 'Modèle personnalisé saisi manuellement.' };
+  }
+  if (cfg.id === 'albert' && !cfg.proxyUrl) { throw new Error("Pour Albert, l'URL du worker n8n est obligatoire pour vérifier les modèles."); }
+  if (!cfg.apiKey && cfg.id !== 'albert' && !cfg.proxyUrl) { throw new Error(`Saisissez une clé API ${cfg.label} ou configurez un worker personnalisé pour vérifier les modèles.`); }
+  if (!cfg.url) { throw new Error('Saisissez une URL API avant de vérifier les modèles.'); }
+
+  try {
+    if (btn && !options.silent) { btn.disabled = true; btn.textContent = 'MAJ...'; }
+    if (!options.silent) setLlmStatus(`Vérification des modèles ${cfg.label} en cours...`, 'info');
+    const models = await fetchLlmModels(cfg);
+    saveModelSnapshot(cfg.id, models);
+    enableModelChoice(cfg.id, models, preferredModel);
+    const summary = summarizeModelUpdate(cfg.id, models);
+    if (!options.silent) setLlmStatus(`Modèles ${cfg.label} mis à jour. ${summary}.`, 'success');
+    return { models, source: 'api', summary };
+  } finally {
+    if (btn && !options.silent) { btn.disabled = false; btn.textContent = 'MAJ MODELES'; }
+  }
+}
+
+async function refreshLlmModelsFromButton() {
+  try {
+    await refreshLlmModels();
+  } catch (e) {
+    const cfg = getLlmConfig();
+    setLlmStatus(`Mise à jour des modèles ${cfg.label} impossible : ${explainNetworkError(e, cfg)}.`, 'error');
+  }
 }
 
 function updateLlmFields() {
@@ -1443,6 +1541,18 @@ function extractLlmContent(data) {
   return '';
 }
 
+function filterChatModels(providerId, models) {
+  const clean = uniqueModelList(models);
+  const badKinds = /(embed|embedding|moderation|ocr|tts|transcribe|whisper|audio|speech|image|vision|realtime|rerank)/i;
+  if (providerId === 'openai') return clean.filter(model => /^gpt-[\w.-]+$/i.test(model) && !badKinds.test(model));
+  if (providerId === 'mistral') return clean.filter(model => /^(mistral|ministral)-/i.test(model) && !badKinds.test(model));
+  if (providerId === 'perplexity') return clean.filter(model => /^sonar/i.test(model));
+  if (providerId === 'claude') return clean.filter(model => /^claude-/i.test(model));
+  if (providerId === 'gemini') return clean.filter(model => /^gemini-/i.test(model) && !badKinds.test(model));
+  if (providerId === 'albert') return clean.filter(model => !badKinds.test(model));
+  return clean;
+}
+
 async function fetchLlmModels(cfg) {
   if (cfg.id === 'custom') return [];
 
@@ -1451,10 +1561,10 @@ async function fetchLlmModels(cfg) {
     const res = await llmFetch(cfg, url);
     if (!res.ok) throw new Error(await readErrorMessage(res, cfg.label));
     const data = await res.json();
-    return (data.models || [])
+    return filterChatModels(cfg.id, (data.models || [])
       .filter(m => !m.supportedGenerationMethods || m.supportedGenerationMethods.includes('generateContent'))
       .map(m => String(m.name || '').replace(/^models\//, ''))
-      .filter(Boolean);
+      .filter(Boolean));
   }
 
   const modelsUrl = getModelListUrl(cfg);
@@ -1479,16 +1589,17 @@ async function fetchLlmModels(cfg) {
     throw new Error(`Réponse JSON invalide du fournisseur ou du worker (models): ${raw.substring(0, 200)}...`);
   }
   const CHAT_TYPES = ['text-generation', 'image-text-to-text'];
-  return (data.data || data.models || [])
+  return filterChatModels(cfg.id, (data.data || data.models || [])
     .filter(m => !m.type || CHAT_TYPES.includes(m.type))
     .map(m => m.id || m.name)
-    .filter(Boolean);
+    .filter(Boolean));
 }
 
 function enableModelChoice(providerId, models, preferredModel = '') {
   const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
   const saved = getSavedLlmSettings(providerId);
-  const uniqueModels = Array.from(new Set((models || []).concat(provider.models || []).filter(Boolean)));
+  const apiModels = uniqueModelList(models || []);
+  const uniqueModels = uniqueModelList(apiModels, provider.models || []);
   const modelListEl = document.getElementById('auto-model-list');
   const modelEl = document.getElementById('auto-model');
   if (modelListEl) {
@@ -1496,8 +1607,8 @@ function enableModelChoice(providerId, models, preferredModel = '') {
   }
   if (modelEl) {
     modelEl.disabled = false;
-    modelEl.placeholder = 'Choisissez ou saisissez un modèle';
-    modelEl.value = preferredModel || saved.model || uniqueModels[0] || getDefaultModel(providerId);
+    modelEl.placeholder = apiModels.length ? 'Choisissez un modèle vérifié' : 'Choisissez ou saisissez un modèle';
+    modelEl.value = pickModel(providerId, apiModels, preferredModel || saved.model);
   }
   llmModelAccess[providerId] = true;
 }
@@ -1598,6 +1709,83 @@ function coerceSongArray(payload) {
   return null;
 }
 
+function normalizeForDuplicate(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/\b(feat|ft|featuring|avec)\b.*$/i, '')
+    .replace(/\b(remaster|remastered|radio edit|official video|clip officiel|lyrics?|audio)\b/gi, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function getSongDuplicateKey(song) {
+  if (!song || isJingle(song)) return '';
+  const artist = normalizeForDuplicate(song.artist);
+  const title = normalizeForDuplicate(song.title);
+  if (artist && title) return `${artist}::${title}`;
+  if (title) return `title::${title}`;
+  const url = normalizeForDuplicate(song.youtubeUrl);
+  return url ? `url::${url}` : '';
+}
+
+function formatSongForPrompt(song) {
+  const artist = String(song?.artist || '').trim();
+  const title = String(song?.title || '').trim();
+  if (artist && title) return `${artist} - ${title}`;
+  return artist || title || '';
+}
+
+function buildExistingSongsPrompt(songs) {
+  const list = (songs || [])
+    .filter(song => !isJingle(song))
+    .map(formatSongForPrompt)
+    .filter(Boolean);
+  return list.length ? list.join('\n') : 'Aucune pour le moment.';
+}
+
+function splitUniqueSongs(candidates, existingSongs = []) {
+  const seen = new Set((existingSongs || []).map(getSongDuplicateKey).filter(Boolean));
+  const unique = [];
+  const duplicates = [];
+  (candidates || []).forEach(song => {
+    const key = getSongDuplicateKey(song);
+    if (!key) {
+      unique.push(song);
+      return;
+    }
+    if (seen.has(key)) {
+      duplicates.push(song);
+      return;
+    }
+    seen.add(key);
+    unique.push(song);
+  });
+  return { unique, duplicates };
+}
+
+function applyAutoDuplicateWarnings() {
+  const counts = new Map();
+  autoSongs.forEach(song => {
+    delete song.duplicateWarning;
+    const key = getSongDuplicateKey(song);
+    if (!key) return;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  autoSongs.forEach(song => {
+    const key = getSongDuplicateKey(song);
+    if (key && counts.get(key) > 1) {
+      song.duplicateWarning = 'Doublon détecté : même artiste et même titre déjà présents dans le blindtest.';
+    }
+  });
+}
+
+function getSongWarnings(row) {
+  return [row.duplicateWarning, row.themeWarning || getThemeRelevanceWarning(row, autoConfig.theme || '')].filter(Boolean);
+}
+
 function buildThemeRules(theme) {
   const t = String(theme || '').toLowerCase();
   const rules = [
@@ -1679,7 +1867,7 @@ function getThemeRelevanceWarning(song, theme) {
 async function testLlmConnection() {
   const currentCfg = getLlmConfig();
   const saved = getSavedLlmSettings(currentCfg.id);
-  const cfg = { ...currentCfg, model: saved.model || currentCfg.model || getDefaultModel(currentCfg.id) };
+  let cfg = { ...currentCfg, model: saved.model || currentCfg.model || getDefaultModel(currentCfg.id) };
   const btn = document.getElementById('auto-test-btn');
   if (cfg.id === 'albert' && !cfg.proxyUrl) { setLlmStatus("Pour Albert, l'URL du worker n8n est OBLIGATOIRE. Configurez-la dans le champ 'URL Worker n8n'.", 'error'); return; }
   if (!cfg.apiKey && cfg.id !== 'albert' && !cfg.proxyUrl) { setLlmStatus(`Saisissez une clé API ${cfg.label} ou configurez un worker personnalisé avant de tester.`, 'error'); return; }
@@ -1688,20 +1876,22 @@ async function testLlmConnection() {
 
   try {
     if (btn) { btn.disabled = true; btn.textContent = 'TEST...'; }
-    setLlmStatus(`Test de connexion ${cfg.label} en cours...`, 'info');
+    setLlmStatus(`Mise à jour des modèles ${cfg.label} avant le test...`, 'info');
+    let modelCheck;
+    try {
+      modelCheck = await refreshLlmModels({ silent: true, cfg, preferredModel: cfg.model });
+      cfg = { ...getLlmConfig(), model: document.getElementById('auto-model')?.value.trim() || cfg.model };
+    } catch (modelErr) {
+      const fallbackModels = LLM_PROVIDERS[cfg.id]?.models || [];
+      enableModelChoice(cfg.id, fallbackModels, cfg.model);
+      modelCheck = { source: 'fallback', summary: `liste distante indisponible; liste de secours utilisée (${explainNetworkError(modelErr, cfg)})` };
+      cfg = { ...getLlmConfig(), model: document.getElementById('auto-model')?.value.trim() || cfg.model };
+    }
+
+    setLlmStatus(`Test de connexion ${cfg.label} avec ${cfg.model}...`, 'info');
     const text = await callLlm('Réponds uniquement avec le mot OK.', cfg);
     if (!String(text || '').trim()) throw new Error('réponse vide');
-    let models = [];
-    let modelSource = "découverts via l'API";
-    try {
-      models = await fetchLlmModels(cfg);
-    } catch (modelErr) {
-      models = LLM_PROVIDERS[cfg.id]?.models || [];
-      modelSource = 'chargés depuis la liste de secours après connexion';
-      if (!models.length) throw modelErr;
-    }
-    enableModelChoice(cfg.id, models, saved.model || cfg.model);
-    setLlmStatus(`Connexion ${cfg.label} OK. Modèles ${modelSource}.`, 'success');
+    setLlmStatus(`Connexion ${cfg.label} OK. ${modelCheck.summary}.`, modelCheck.source === 'fallback' ? 'warning' : 'success');
   } catch (e) {
     llmModelAccess[cfg.id] = false;
     setLlmStatus(`Connexion ${cfg.label} impossible : ${explainNetworkError(e, cfg)}.`, 'error');
@@ -1743,16 +1933,28 @@ async function generatePlaylist() {
 
   try {
     for (let currentRound = 1; currentRound <= rounds; currentRound++) {
-      btn.textContent = `⏳ GÉNÉRATION MANCHE ${currentRound}/${rounds}...`;
-      const prompt = `Tu es un expert en musique. Génère les ${spr} chansons de la MANCHE ${currentRound} sur ${rounds} pour un blindtest musical sur le thème : "${theme}".
+      let roundSongs = [];
+      let duplicateCount = 0;
+
+      for (let attempt = 0; attempt < 3 && roundSongs.length < spr; attempt++) {
+        const needed = spr - roundSongs.length;
+        btn.textContent = attempt === 0
+          ? `⏳ GÉNÉRATION MANCHE ${currentRound}/${rounds}...`
+          : `⏳ REMPLACEMENT DOUBLONS ${currentRound}/${rounds}...`;
+        const existingSongsList = buildExistingSongsPrompt(allParsed.concat(roundSongs));
+        const prompt = `Tu es un expert en musique. Génère ${needed} chanson${needed > 1 ? 's' : ''} ${attempt === 0 ? `de la MANCHE ${currentRound} sur ${rounds}` : 'de remplacement'} pour un blindtest musical sur le thème : "${theme}".
 
 CONTRAINTES DU THÈME :
 ${themeRules}
 ${commentInstructions}
 
+TITRES DÉJÀ UTILISÉS, INTERDITS À RÉPÉTER :
+${existingSongsList}
+
 RÈGLES :
 - Chansons variées et emblématiques du thème
-- Aucun doublon (ne propose pas d'artistes déjà utilisés si possible)
+- Aucun doublon : ne répète jamais un couple artiste + titre déjà présent dans la liste interdite ou dans ta propre réponse.
+- Évite aussi de réutiliser un artiste déjà présent si le thème permet assez de variété.
 - Chaque objet doit respecter exactement les contraintes du thème
 - Le lien au thème doit être direct et défendable : titre, paroles/refrain, sujet explicite, clip connu ou contexte culturel notoire.
 - Interdiction des justifications faibles : "populaire en été", "souvent associé à", "souvenirs", "ambiance", "évoque l'amour et les vacances" sans preuve concrète.
@@ -1768,19 +1970,28 @@ ${bonusLine}
 Réponds UNIQUEMENT avec un tableau JSON valide, sans markdown, sans backticks, sans commentaires :
 [{"artist":"...","title":"...","youtubeUrl":"https://...","start":"0:45","duration":${duration},"bonus":"...","bonusAnswer":"...","justification":"...","manche":${currentRound}}]
 
-Génère exactement ${spr} objets.`;
+Génère exactement ${needed} objet${needed > 1 ? 's' : ''}.`;
 
-      const text = await callLlm(prompt, llmCfg);
-      const parsed = extractJsonPayload(text);
-      const songs = coerceSongArray(parsed);
-      if (!songs) {
-        console.error('Playlist JSON without song array:', parsed);
-        const receivedShape = parsed && typeof parsed === 'object'
-          ? `objet avec les clés: ${Object.keys(parsed).slice(0, 8).join(', ') || 'aucune'}`
-          : typeof parsed;
-        throw new Error(`Le JSON reçu ne contient pas de tableau de chansons (${receivedShape}).`);
+        const text = await callLlm(prompt, llmCfg);
+        const parsed = extractJsonPayload(text);
+        const songs = coerceSongArray(parsed);
+        if (!songs) {
+          console.error('Playlist JSON without song array:', parsed);
+          const receivedShape = parsed && typeof parsed === 'object'
+            ? `objet avec les clés: ${Object.keys(parsed).slice(0, 8).join(', ') || 'aucune'}`
+            : typeof parsed;
+          throw new Error(`Le JSON reçu ne contient pas de tableau de chansons (${receivedShape}).`);
+        }
+        const split = splitUniqueSongs(songs, allParsed.concat(roundSongs));
+        duplicateCount += split.duplicates.length;
+        roundSongs = roundSongs.concat(split.unique).slice(0, spr);
       }
-      allParsed = allParsed.concat(songs);
+
+      if (roundSongs.length < spr) {
+        throw new Error(`Le LLM a généré trop de doublons pour la manche ${currentRound}. ${roundSongs.length}/${spr} chansons uniques seulement après remplacement.`);
+      }
+      if (duplicateCount) console.warn(`Doublons supprimés manche ${currentRound}:`, duplicateCount);
+      allParsed = allParsed.concat(roundSongs);
     }
     
     autoSongs = allParsed.map(s => ({ ...s, id: Date.now() + Math.random(), selected: true, bonusEnabled: !!bonus, mp3Data: '', mp3Name: '' }));
@@ -1809,6 +2020,7 @@ updateLlmFields();
 // AUTO TABLE
 // ================================================================
 function renderAutoTable() {
+  applyAutoDuplicateWarnings();
   const container = document.getElementById('auto-table-sections');
   container.innerHTML = '';
 
@@ -1874,9 +2086,10 @@ function buildAutoRow(row) {
     <td><input class="cell-inp" value="${escHtml(row.bonus)}" ${bonusEnabled?'':'disabled'} data-idx="${i}" data-field="bonus" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>
     <td><input class="cell-inp" value="${escHtml(row.bonusAnswer)}" ${bonusEnabled?'':'disabled'} data-idx="${i}" data-field="bonusAnswer" onchange="updateAutoRow(parseInt(this.dataset.idx),this.dataset.field,this.value)"></td>`;
   const justif = row.justification || '';
-  const warning = row.themeWarning || getThemeRelevanceWarning(row, autoConfig.theme || '');
-  const warningHtml = warning
-    ? `<div style="margin-top:4px;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#ffb84d;line-height:1.4">⚠ ${escHtml(warning)}</div>`
+  const warnings = getSongWarnings(row);
+  const warning = warnings[0] || '';
+  const warningHtml = warnings.length
+    ? warnings.map(msg => `<div style="margin-top:4px;font-family:'Orbitron',sans-serif;font-size:.5rem;color:#ffb84d;line-height:1.4">⚠ ${escHtml(msg)}</div>`).join('')
     : '';
   return `<tr style="border-bottom:1px solid rgba(255,255,255,.03)">
     <td style="padding:7px 6px"><input type="checkbox" class="check-cb" ${row.selected?'checked':''} data-idx="${i}" data-field="selected" onchange="updateAutoRow(parseInt(this.dataset.idx),'selected',this.checked)"></td>
@@ -1960,19 +2173,27 @@ async function revokeSong(i) {
   const btn = document.getElementById(`revoke-${i}`);
   if (!btn) return;
   btn.disabled = true; btn.textContent = '⏳';
-  const existing = autoSongs.map(s => `${s.artist} - ${s.title}`).join(', ');
   const song = autoSongs[i];
   const themeRules = buildThemeRules(autoConfig.theme || '');
-  const prompt = `Tu es un expert en musique. Propose UNE SEULE chanson de remplacement pour un blindtest sur le thème "${autoConfig.theme}".
+  const existingSongs = autoSongs.filter((s, idx) => idx !== i && !isJingle(s));
+
+  try {
+    const llmCfg = autoConfig.llm || getLlmConfig();
+    let newSong = null;
+    for (let attempt = 0; attempt < 3 && !newSong; attempt++) {
+      const existing = buildExistingSongsPrompt(existingSongs);
+      const prompt = `Tu es un expert en musique. Propose UNE SEULE chanson de remplacement pour un blindtest sur le thème "${autoConfig.theme}".
 
 CONTRAINTES DU THÈME :
 ${themeRules}
 
 Chanson à remplacer : "${song.artist} - ${song.title}"
-Chansons déjà dans la liste (à exclure absolument) : ${existing}
+Chansons déjà dans la liste, à exclure absolument :
+${existing}
 
 RÈGLES :
 - La chanson proposée doit respecter toutes les contraintes du thème.
+- Aucun doublon : ne propose pas un couple artiste + titre déjà présent dans la liste à exclure.
 - Le lien au thème doit être direct et vérifiable : titre, paroles/refrain, sujet explicite, clip connu ou contexte culturel notoire.
 - Refuse les justifications vagues comme "populaire en été", "souvenirs", "ambiance" ou "souvent associé à" sans preuve concrète.
 - Si le thème impose US/USA/États-Unis, l'artiste doit venir des États-Unis.
@@ -1980,11 +2201,12 @@ RÈGLES :
 
 Réponds UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) :
 {"artist":"...","title":"...","youtubeUrl":"https://...","start":"0:45","duration":${autoConfig.duration || 30},"bonus":"...","bonusAnswer":"...","justification":"Lien concret avec le thème en une phrase.","manche":${song.manche || 1}}`;
-
-  try {
-    const llmCfg = autoConfig.llm || getLlmConfig();
-    const text = await callLlm(prompt, llmCfg);
-    const newSong = extractJsonPayload(text);
+      const text = await callLlm(prompt, llmCfg);
+      const candidate = extractJsonPayload(text);
+      const split = splitUniqueSongs([candidate], existingSongs);
+      if (split.unique.length) newSong = split.unique[0];
+    }
+    if (!newSong) throw new Error('Le LLM a proposé uniquement des doublons pour ce remplacement.');
     autoSongs[i] = { ...newSong, id: Date.now() + Math.random(), selected: true, bonusEnabled: song.bonusEnabled !== false, mp3Data: '', mp3Name: '' };
     autoSongs[i].themeWarning = getThemeRelevanceWarning(autoSongs[i], autoConfig.theme || '');
     renderAutoTable();
