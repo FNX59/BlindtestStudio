@@ -1,12 +1,13 @@
 // Service Worker de BlindTest Studio.
 // Il rend l'interface principale disponible hors-ligne après une première visite.
 
-const CACHE_NAME = "blindtest-studio-v1.0.8";
+const CACHE_NAME = "blindtest-studio-v1.0.9";
 
 const FICHIERS_A_METTRE_EN_CACHE = [
   "./",
   "./index.html",
   "./manifest.json",
+  "./icon-192.png",
   "./sw.js"
 ];
 
