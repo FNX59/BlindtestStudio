@@ -675,13 +675,13 @@ function loadBlindtestDraft() {
 }
 
 // ================================================================
-// WEB AUDIO — Volume normalization + fade in / fade out (1.5 s)
+// WEB AUDIO — Volume normalization + fade in / fade out (2 s)
 // ================================================================
 let _audioCtx = null;
 let _gainNode = null;
 let _compressorNode = null;
 let _audioSource = null;
-const FADE_DURATION = 1.5; // secondes
+const FADE_DURATION = 2; // secondes
 const NORMALIZED_OUTPUT_GAIN = 0.9;
 
 function getAudioCtx() {
@@ -2452,7 +2452,7 @@ function togglePlay(idx) {
       connectAudioToGain(audioPlayer);
       audioPlayer.play().then(() => {
         updatePlayBtn(true);
-        fadeIn(); // fondu d'entrée 1,5 s
+        fadeIn(); // fondu d'entrée 2 s
         // Planifier le fade out avant la fin de la durée
         const fadeOutAt = Math.max(0, durMs - fadeMs);
         window._audioFadeOutTimer = setTimeout(() => {
@@ -2880,6 +2880,8 @@ const countSongs=items=>items.filter(s=>!isJingle(s)).length;
 let cur=0,audio=new Audio(),audioIdx=null,answersVisible=${JSON.stringify(exportedAnswersVisible)},answerVisibility=songs.map(s=>isJingle(s)?true:answersVisible);
 let audioCtx=null,masterGain=null,compressor=null,audioSource=null;
 const NORMALIZED_OUTPUT_GAIN=.9;
+const FADE_DURATION=2;
+let fadeStopSeq=0;
 function getAudioCtx(){
   if(!audioCtx||audioCtx.state==='closed'){
     audioCtx=new (window.AudioContext||window.webkitAudioContext)();
@@ -2894,7 +2896,7 @@ function getAudioCtx(){
     compressor.connect(masterGain);
     masterGain.connect(audioCtx.destination);
   }
-  return{ctx:audioCtx,compressor};
+  return{ctx:audioCtx,compressor,gain:masterGain};
 }
 function connectNormalizedAudio(player){
   try{if(audioSource){audioSource.disconnect();audioSource=null}}catch(e){}
@@ -2904,6 +2906,20 @@ function connectNormalizedAudio(player){
   audioSource=chain.ctx.createMediaElementSource(player);
   audioSource.connect(chain.compressor);
 }
+function fadeInNormalized(){
+  const chain=getAudioCtx(),now=chain.ctx.currentTime;
+  chain.gain.gain.cancelScheduledValues(now);
+  chain.gain.gain.setValueAtTime(0,now);
+  chain.gain.gain.linearRampToValueAtTime(NORMALIZED_OUTPUT_GAIN,now+FADE_DURATION);
+}
+function fadeOutNormalized(done){
+  const chain=getAudioCtx(),now=chain.ctx.currentTime;
+  chain.gain.gain.cancelScheduledValues(now);
+  chain.gain.gain.setValueAtTime(chain.gain.gain.value,now);
+  chain.gain.gain.linearRampToValueAtTime(0,now+FADE_DURATION);
+  setTimeout(()=>{if(done)done()},FADE_DURATION*1000);
+}
+function resetAudioButtons(){document.querySelectorAll('.play-btn').forEach(b=>{b.textContent='▶';b.classList.remove('playing')})}
 function build(){
   const c=document.getElementById('slides');
   c.innerHTML='';
@@ -2999,15 +3015,20 @@ function updateNav(){
   ctr.textContent=(cur<=0||cur>=total-1)?'':(active?.dataset.jingle==='true'?'JINGLE':\`\${active?.dataset.songOrdinal||cur} / \${countSongs(songs)}\`);
 }
 function reveal(id,btn){const el=document.getElementById(id);if(el)el.classList.add('shown');if(btn){btn.disabled=true;btn.style.opacity='.4'}}
-function stopAudio(){audio.pause();audioIdx=null;clearTimeout(window._at);document.querySelectorAll('.play-btn').forEach(b=>{b.textContent='▶';b.classList.remove('playing')})}
+function stopAudio(immediate=false){
+  clearTimeout(window._at);clearTimeout(window._fadeAt);
+  if(immediate||audio.paused){audio.pause();audioIdx=null;resetAudioButtons();return}
+  const seq=++fadeStopSeq;
+  fadeOutNormalized(()=>{if(seq===fadeStopSeq){audio.pause();audioIdx=null;resetAudioButtons()}});
+}
 function togglePlay(i){
   const s=songs[i];if(!s)return;
   const start=(t=>{if(!t)return 0;const p=String(t).split(':').map(Number);if(p.length===2)return p[0]*60+p[1];return parseFloat(p[0])||0})(s.start);
   const mp3Start=s.mp3FromYoutube?0:start;
   const btn=document.getElementById('pb-'+i);
   if(s.mp3Data){
-    if(audioIdx===i&&!audio.paused){stopAudio();return}
-    stopAudio();
+    if(audioIdx===i&&!audio.paused){stopAudio(false);return}
+    stopAudio(true);
     audio=new Audio(s.mp3Data);
     audioIdx=i;
     const doPlay=()=>{
@@ -3015,9 +3036,12 @@ function togglePlay(i){
       connectNormalizedAudio(audio);
       audio.play().then(()=>{
         btn.textContent='⏸';btn.classList.add('playing');
-        window._at=setTimeout(()=>{audio.pause();btn.textContent='▶';btn.classList.remove('playing')},(parseInt(s.duration)||30)*1000);
+        fadeInNormalized();
+        const durMs=(parseInt(s.duration)||30)*1000;
+        window._fadeAt=setTimeout(()=>stopAudio(false),Math.max(0,durMs-FADE_DURATION*1000));
+        window._at=setTimeout(()=>stopAudio(true),durMs+FADE_DURATION*1000+250);
       }).catch(()=>alert('Impossible de lire ce MP3.'));
-      audio.onended=()=>{btn.textContent='▶';btn.classList.remove('playing')};
+      audio.onended=()=>{audioIdx=null;resetAudioButtons()};
     };
     if(mp3Start>0){audio.addEventListener('loadedmetadata',doPlay,{once:true});audio.load();}else{doPlay();}
     return;
