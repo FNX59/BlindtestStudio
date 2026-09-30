@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -530,13 +530,7 @@ let exportHtmlContent = '';
 let audioPlayer = new Audio();
 let audioCurrentIdx = null;
 const AUDIO_EXTRACT_API = (() => {
-  const stored = localStorage.getItem('blindtestAudioExtractApi') || 'http://localhost:3478/api/extract';
-  // En HTTPS, le navigateur bloque les appels vers http://localhost (mixed content).
-  // On désactive le service local : le player YouTube prendra le relais.
-  const isHttps = location.protocol === 'https:';
-  const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(stored);
-  if (isHttps && isLocalhost) return null;
-  return stored;
+  return localStorage.getItem('blindtestAudioExtractApi') || 'http://localhost:3478/api/extract';
 })();
 const IS_LOCAL_MODE = !!AUDIO_EXTRACT_API; // true = service local disponible
 
