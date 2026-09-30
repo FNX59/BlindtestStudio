@@ -2,12 +2,14 @@
 
 Application éducative de création de blindtests avec génération LLM, préparation audio locale et présentation autonome.
 
-**Version : 1.0.9**
+**Version : 1.0.10**
 
 ## Fonctionnalités
 
 - Création de blindtests interactifs
 - Génération de playlist avec LLM (Ollama, OpenAI, Anthropic, Gemini, Mistral, Albert, worker personnalisé)
+- Consignes LLM avancées via prompt libre (Langage Naturel, Markdown, structure)
+- Sélection facile des modèles LLM via liste déroulante dynamique
 - Sauvegarde et restauration automatique du blindtest en cours (localStorage)
 - Support des jingles entre les manches
 - Signalement des propositions LLM dont le lien au thème est trop vague

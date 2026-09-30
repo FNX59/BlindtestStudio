@@ -2,9 +2,16 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
-## [1.0.9] - 2026-09-30
+## [1.0.10] - 2026-09-30
 
 ### Ajouts
+- Génération LLM : ajout d'un champ dédié pour formuler des consignes libres en langage naturel, Markdown ou format structuré, permettant d'orienter précisément les règles et la sélection des chansons par le modèle.
+- Génération LLM : le choix du modèle s'effectue désormais via une liste déroulante dynamique et toujours accessible, sans imposer de test de connexion préalable.
+
+### Modifications
+- Mise à jour du cache PWA du service worker.
+
+## [1.0.9] - 2026-09-30
 - Détection automatique du mode d'exécution (local vs. hébergé) avec vérification HTTPS.
 - Amélioration du feedback utilisateur en cas de contrainte de sécurité (mixed-content, HTTPS requis).
 

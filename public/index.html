@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -72,6 +72,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 /* INPUTS */
 .inp{background:rgba(0,0,0,.4);border:1px solid rgba(0,245,255,.25);border-radius:8px;color:#fff;font-family:'Orbitron',sans-serif;font-size:.82rem;padding:10px 13px;outline:none;width:100%;transition:border-color .2s,box-shadow .2s}
 .inp:focus{border-color:var(--cyan);box-shadow:0 0 10px rgba(0,245,255,.28)}
+select.inp option{background:#0d061a;color:#fff;font-family:'Orbitron',sans-serif;padding:6px 10px}
 label.lbl{font-family:'Press Start 2P',monospace;font-size:.45rem;color:rgba(0,245,255,.7);letter-spacing:2px;display:block;margin-bottom:6px;text-transform:uppercase}
 
 /* HEADER */
@@ -357,8 +358,9 @@ td{padding:5px 4px}
           </div>
           <div>
             <label class="lbl">Modèle</label>
-            <input class="inp" id="auto-model" list="auto-model-list" placeholder="Testez la connexion pour charger les modèles" disabled>
-            <datalist id="auto-model-list"></datalist>
+            <select class="inp" id="auto-model" onchange="onModelSelectChange()">
+            </select>
+            <input class="inp" id="auto-model-custom" style="display:none;margin-top:6px" placeholder="Nom du modèle personnalisé (ex: llama-3, mistral-large...)">
           </div>
         </div>
         <div id="auto-baseurl-wrap" style="display:none;margin-bottom:12px">
@@ -381,11 +383,22 @@ td{padding:5px 4px}
       </div>
       <div style="margin-bottom:16px">
         <label class="lbl">Thème du blindtest</label>
-        <input class="inp" id="auto-theme" placeholder="ex: Chanson française 80s, Pop internationale...">
+        <input class="inp" id="auto-theme" placeholder="ex: Chanson française 80s, Musiques de films...">
       </div>
       <div style="margin-bottom:16px">
-        <label class="lbl">Commentaires</label>
-        <textarea class="inp" id="auto-comments" rows="3" placeholder="Consignes optionnelles pour le LLM : niveau, public, exclusions, équilibre des artistes..." style="resize:vertical;min-height:82px;line-height:1.45"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label class="lbl" style="margin-bottom:0">Consignes libres / Prompt (Langage naturel, Markdown...)</label>
+          <span style="font-family:'VT323',monospace;font-size:.85rem;color:var(--cyan);letter-spacing:1px">✨ INTERPRÉTÉ PAR LE LLM</span>
+        </div>
+        <textarea class="inp" id="auto-prompt" rows="4" placeholder="Écrivez librement en langage naturel, Markdown ou format structuré :
+• Directives par manche (ex: Manche 1: Rock 70s, Manche 2: B.O. de séries)
+• Niveau de difficulté (ex: tubes incontournables ou pépites rares)
+• Équilibre d'artistes, pays, langues ou exclusions d'artistes
+• Style des questions bonus (ex: anecdotes de tournage, année de sortie)..." style="resize:vertical;min-height:96px;line-height:1.45;font-family:'Orbitron',sans-serif;font-size:.78rem"></textarea>
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="lbl">Commentaires additionnels (optionnel)</label>
+        <textarea class="inp" id="auto-comments" rows="2" placeholder="Notes complémentaires ou remarques diverses..." style="resize:vertical;min-height:54px;line-height:1.45"></textarea>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
         <div><label class="lbl">Nombre de manches</label><input class="inp" id="auto-rounds" type="number" value="3" min="1" max="10"></div>
@@ -652,9 +665,10 @@ function applyManualDraft(data = {}) {
 
 function applyAutoDraft(data = {}) {
   const cfg = data.config || {};
-  autoConfig = { rounds: 3, spr: 5, duration: 30, bonus: true, comments: '', ...cfg };
+  autoConfig = { rounds: 3, spr: 5, duration: 30, bonus: true, comments: '', prompt: '', ...cfg };
   const theme = autoConfig.theme || '';
   if (document.getElementById('auto-theme')) document.getElementById('auto-theme').value = theme;
+  if (document.getElementById('auto-prompt')) document.getElementById('auto-prompt').value = autoConfig.prompt || '';
   if (document.getElementById('auto-comments')) document.getElementById('auto-comments').value = autoConfig.comments || '';
   if (document.getElementById('auto-rounds')) document.getElementById('auto-rounds').value = autoConfig.rounds || 3;
   if (document.getElementById('auto-spr')) document.getElementById('auto-spr').value = autoConfig.spr || 5;
@@ -1189,14 +1203,41 @@ function setLlmStatus(msg, type = 'info') {
   el.style.display = 'block';
 }
 
+function getSelectedModelValue(providerId) {
+  const modelEl = document.getElementById('auto-model');
+  const customEl = document.getElementById('auto-model-custom');
+  if (!modelEl) return '';
+  if (modelEl.value === '__custom__') {
+    return customEl ? customEl.value.trim() : '';
+  }
+  return modelEl.value.trim();
+}
+
+function onModelSelectChange() {
+  const modelEl = document.getElementById('auto-model');
+  const customEl = document.getElementById('auto-model-custom');
+  if (!modelEl) return;
+  if (modelEl.value === '__custom__') {
+    if (customEl) {
+      customEl.style.display = 'block';
+      customEl.focus();
+    }
+  } else {
+    if (customEl) {
+      customEl.style.display = 'none';
+    }
+  }
+}
+
 function getLlmConfig() {
   const providerId = document.getElementById('auto-provider')?.value || 'albert';
   const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
+  const chosenModel = getSelectedModelValue(providerId);
   return {
     id: providerId,
     label: provider.label,
     mode: provider.mode,
-    model: document.getElementById('auto-model').value.trim() || provider.model,
+    model: chosenModel || provider.model,
     url: document.getElementById('auto-baseurl').value.trim() || provider.url,
     proxyUrl: document.getElementById('auto-proxyurl')?.value.trim() || provider.proxyUrl || '',
     apiKey: document.getElementById('auto-apikey').value.trim()
@@ -1321,8 +1362,6 @@ function updateLlmFields() {
   const providerId = document.getElementById('auto-provider')?.value || 'albert';
   const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
   const saved = getSavedLlmSettings(providerId);
-  const modelEl = document.getElementById('auto-model');
-  const modelListEl = document.getElementById('auto-model-list');
   const baseUrlEl = document.getElementById('auto-baseurl');
   const baseUrlWrap = document.getElementById('auto-baseurl-wrap');
   const proxyUrlEl = document.getElementById('auto-proxyurl');
@@ -1332,16 +1371,12 @@ function updateLlmFields() {
   const helpEl = document.getElementById('auto-provider-help');
   const isAlbert = providerId === 'albert';
 
-  if (modelListEl) {
-    modelListEl.innerHTML = '';
-  }
-  if (modelEl) {
-    modelEl.value = '';
-    modelEl.disabled = true;
-    modelEl.placeholder = saved.model
-      ? `Testez la connexion pour réactiver ${saved.model}`
-      : 'Testez la connexion pour charger les modèles';
-  }
+  // Peupler immédiatement la liste déroulante des modèles
+  const cachedSnapshot = getCachedModelSnapshot(providerId)?.models || [];
+  const knownModels = uniqueModelList(cachedSnapshot, provider.models || []);
+  const preferredModel = saved.model || provider.model || (knownModels[0] || '');
+  enableModelChoice(providerId, knownModels, preferredModel);
+
   if (baseUrlEl) {
     baseUrlEl.value = saved.url || (providerId === 'custom' ? '' : provider.url);
     baseUrlEl.placeholder = provider.url || 'https://.../v1/chat/completions';
@@ -1370,7 +1405,6 @@ function updateLlmFields() {
   if (helpEl) helpEl.textContent = saved.apiKey ? `${provider.help} Clé enregistrée pour ce fournisseur.` : provider.help;
   const statusEl = document.getElementById('auto-llm-status');
   if (statusEl) statusEl.style.display = 'none';
-  llmModelAccess[providerId] = false;
 }
 
 function saveLlmSettings() {
@@ -1380,7 +1414,7 @@ function saveLlmSettings() {
   if (cfg.id === 'custom' && !cfg.url) { setLlmStatus('Saisissez une URL API pour ce fournisseur personnalisé.', 'error'); return; }
   localStorage.setItem(LLM_STORAGE_PREFIX + cfg.id, JSON.stringify({
     apiKey: cfg.apiKey,
-    model: document.getElementById('auto-model').disabled ? '' : cfg.model,
+    model: cfg.model,
     url: cfg.url,
     proxyUrl: cfg.proxyUrl
   }));
@@ -1652,16 +1686,44 @@ function enableModelChoice(providerId, models, preferredModel = '') {
   const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.mistral;
   const saved = getSavedLlmSettings(providerId);
   const apiModels = uniqueModelList(models || []);
-  const uniqueModels = uniqueModelList(apiModels, provider.models || []);
-  const modelListEl = document.getElementById('auto-model-list');
+  const cachedSnapshot = getCachedModelSnapshot(providerId)?.models || [];
+  const uniqueModels = uniqueModelList(apiModels, cachedSnapshot, provider.models || []);
   const modelEl = document.getElementById('auto-model');
-  if (modelListEl) {
-    modelListEl.innerHTML = uniqueModels.map(m => `<option value="${escHtml(m)}"></option>`).join('');
-  }
+  const customEl = document.getElementById('auto-model-custom');
+
   if (modelEl) {
+    const targetModel = preferredModel || saved.model || provider.model || '';
+    const selected = pickModel(providerId, uniqueModels, targetModel);
+
+    let optionsHtml = '';
+    if (uniqueModels.length > 0) {
+      optionsHtml = uniqueModels.map(m => `<option value="${escHtml(m)}"${m === selected ? ' selected' : ''}>${escHtml(m)}</option>`).join('');
+    }
+
+    const isCustomModel = selected && !uniqueModels.includes(selected);
+    if (isCustomModel) {
+      optionsHtml = `<option value="${escHtml(selected)}" selected>${escHtml(selected)}</option>` + optionsHtml;
+    }
+
+    if (providerId === 'custom' || (!uniqueModels.length && !isCustomModel)) {
+      optionsHtml = `<option value="__custom__" selected>✏️ Modèle personnalisé (saisie libre)...</option>` + optionsHtml;
+      modelEl.innerHTML = optionsHtml;
+      modelEl.value = '__custom__';
+      if (customEl) {
+        customEl.style.display = 'block';
+        customEl.value = targetModel || '';
+      }
+    } else {
+      optionsHtml += `<option value="__custom__">✏️ Autre modèle (saisie libre)...</option>`;
+      modelEl.innerHTML = optionsHtml;
+      modelEl.value = selected;
+      if (customEl) {
+        customEl.style.display = 'none';
+        customEl.value = '';
+      }
+    }
+
     modelEl.disabled = false;
-    modelEl.placeholder = apiModels.length ? 'Choisissez un modèle vérifié' : 'Choisissez ou saisissez un modèle';
-    modelEl.value = pickModel(providerId, apiModels, preferredModel || saved.model);
   }
   llmModelAccess[providerId] = true;
 }
@@ -1933,12 +1995,12 @@ async function testLlmConnection() {
     let modelCheck;
     try {
       modelCheck = await refreshLlmModels({ silent: true, cfg, preferredModel: cfg.model });
-      cfg = { ...getLlmConfig(), model: document.getElementById('auto-model')?.value.trim() || cfg.model };
+      cfg = { ...getLlmConfig(), model: getSelectedModelValue(cfg.id) || cfg.model };
     } catch (modelErr) {
       const fallbackModels = LLM_PROVIDERS[cfg.id]?.models || [];
       enableModelChoice(cfg.id, fallbackModels, cfg.model);
       modelCheck = { source: 'fallback', summary: `liste distante indisponible; liste de secours utilisée (${explainNetworkError(modelErr, cfg)})` };
-      cfg = { ...getLlmConfig(), model: document.getElementById('auto-model')?.value.trim() || cfg.model };
+      cfg = { ...getLlmConfig(), model: getSelectedModelValue(cfg.id) || cfg.model };
     }
 
     setLlmStatus(`Test de connexion ${cfg.label} avec ${cfg.model}...`, 'info');
@@ -1955,7 +2017,8 @@ async function testLlmConnection() {
 
 async function generatePlaylist() {
   const llmCfg = getLlmConfig();
-  const theme = document.getElementById('auto-theme').value.trim();
+  let theme = document.getElementById('auto-theme').value.trim();
+  const userPrompt = document.getElementById('auto-prompt')?.value.trim() || '';
   const comments = document.getElementById('auto-comments')?.value.trim() || '';
   const rounds = parseInt(document.getElementById('auto-rounds').value) || 3;
   const spr = parseInt(document.getElementById('auto-spr').value) || 5;
@@ -1970,7 +2033,14 @@ async function generatePlaylist() {
   if (!llmModelAccess[llmCfg.id] || document.getElementById('auto-model').disabled) { showErr('Veuillez tester la connexion avant de choisir le modèle et générer la playlist.'); return; }
   if (!llmCfg.model) { showErr('Veuillez saisir le modèle à utiliser !'); return; }
   if (!llmCfg.url) { showErr("Veuillez saisir l'URL API à utiliser !"); return; }
-  if (!theme) { showErr('Veuillez saisir un thème !'); return; }
+
+  // Si le thème est vide mais que des consignes libres sont fournies, dériver un nom de thème
+  if (!theme && userPrompt) {
+    const firstLine = userPrompt.split('\n')[0].replace(/^[#\-*\s]+/, '').trim();
+    theme = firstLine.length > 55 ? firstLine.substring(0, 52) + '...' : (firstLine || 'Blindtest personnalisé');
+    document.getElementById('auto-theme').value = theme;
+  }
+  if (!theme) { showErr('Veuillez saisir un thème ou des consignes pour la génération !'); return; }
 
   const btn = document.getElementById('auto-gen-btn');
   btn.disabled = true;
@@ -1978,8 +2048,14 @@ async function generatePlaylist() {
   const total = rounds * spr;
   const bonusLine = bonus ? `- Pour chaque chanson, propose une question bonus (anecdote ou fait intéressant) et sa réponse.` : `- Les champs "bonus" et "bonusAnswer" doivent être des chaînes vides "".`;
   const themeRules = buildThemeRules(theme);
-  const commentInstructions = comments
-    ? `\nCOMMENTAIRES UTILISATEUR À RESPECTER :\n${comments}\n`
+
+  const combinedInstructions = [
+    userPrompt ? `CONSIGNES LIBRES DE L'UTILISATEUR (LANGAGE NATUREL, MARKDOWN OU FORMAT STRUCTURÉ) :\n${userPrompt}` : '',
+    comments ? `COMMENTAIRES ADDITIONNELS :\n${comments}` : ''
+  ].filter(Boolean).join('\n\n');
+
+  const commentInstructions = combinedInstructions
+    ? `\nDIRECTIVES DE L'UTILISATEUR À INTERPRÉTER ET APPLIQUER SCRUPULEUSEMENT :\n${combinedInstructions}\n(Prends scrupuleusement en compte ces indications pour orienter le style, le niveau ou la sélection de la MANCHE en cours ainsi que pour l'ensemble du blindtest).\n`
     : '';
   
   let allParsed = [];
@@ -2049,7 +2125,7 @@ Génère exactement ${needed} objet${needed > 1 ? 's' : ''}.`;
     
     autoSongs = allParsed.map(s => ({ ...s, id: Date.now() + Math.random(), selected: true, bonusEnabled: !!bonus, mp3Data: '', mp3Name: '' }));
     autoSongs.forEach(s => { s.themeWarning = getThemeRelevanceWarning(s, theme); });
-    autoConfig = { theme, comments, rounds, spr, duration, bonus, showAnswers, llm: llmCfg };
+    autoConfig = { theme, prompt: userPrompt, comments, rounds, spr, duration, bonus, showAnswers, llm: llmCfg };
     document.getElementById('auto-table-title').textContent = '🎵 ' + theme;
     renderAutoTable();
     showScreen('screen-auto-table');
@@ -2257,6 +2333,11 @@ async function revokeSong(i) {
   const song = autoSongs[i];
   const themeRules = buildThemeRules(autoConfig.theme || '');
   const existingSongs = autoSongs.filter((s, idx) => idx !== i && !isJingle(s));
+  const customInstructions = [
+    autoConfig.prompt ? `CONSIGNES LIBRES DE L'UTILISATEUR :\n${autoConfig.prompt}` : '',
+    autoConfig.comments ? `COMMENTAIRES :\n${autoConfig.comments}` : ''
+  ].filter(Boolean).join('\n\n');
+  const instructionsBlock = customInstructions ? `\nCONSIGNES DE L'UTILISATEUR :\n${customInstructions}\n` : '';
 
   try {
     const llmCfg = autoConfig.llm || getLlmConfig();
@@ -2267,7 +2348,7 @@ async function revokeSong(i) {
 
 CONTRAINTES DU THÈME :
 ${themeRules}
-
+${instructionsBlock}
 Chanson à remplacer : "${song.artist} - ${song.title}"
 Chansons déjà dans la liste, à exclure absolument :
 ${existing}
