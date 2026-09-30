@@ -516,7 +516,17 @@ let ytReady = false;
 let exportHtmlContent = '';
 let audioPlayer = new Audio();
 let audioCurrentIdx = null;
-const AUDIO_EXTRACT_API = localStorage.getItem('blindtestAudioExtractApi') || 'http://localhost:3478/api/extract';
+const AUDIO_EXTRACT_API = (() => {
+  const stored = localStorage.getItem('blindtestAudioExtractApi') || 'http://localhost:3478/api/extract';
+  // En HTTPS, le navigateur bloque les appels vers http://localhost (mixed content).
+  // On désactive le service local : le player YouTube prendra le relais.
+  const isHttps = location.protocol === 'https:';
+  const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(stored);
+  if (isHttps && isLocalhost) return null;
+  return stored;
+})();
+const IS_LOCAL_MODE = !!AUDIO_EXTRACT_API; // true = service local disponible
+
 const JINGLE_TYPE = 'jingle';
 
 function isJingle(row) {
@@ -2363,6 +2373,7 @@ function addPrepLine(icon, text, color = 'rgba(255,255,255,.62)') {
 
 function canDownloadAudio(song) {
   if (isJingle(song)) return false;
+  if (!AUDIO_EXTRACT_API) return false; // service local indisponible (mode HTTPS)
   return !!((song.youtubeUrl && String(song.youtubeUrl).trim()) || (song.artist && song.title));
 }
 
@@ -2398,9 +2409,14 @@ async function prepareAudioBeforePresentation(songs) {
   setPrepProgress(0, songs.length);
   modal?.classList.add('open');
 
-  const needsDownload = songs.some(s => !s.mp3Data && canDownloadAudio(s));
-  if (needsDownload) {
-    addPrepLine('▶', `Service audio : ${AUDIO_EXTRACT_API}`, 'var(--cyan)');
+  // Informer sur le mode audio utilisé
+  if (!IS_LOCAL_MODE) {
+    addPrepLine('▶', 'Mode hébergé : lecture via YouTube (lien requis par chanson)', 'var(--cyan)');
+  } else {
+    const needsDownload = songs.some(s => !s.mp3Data && canDownloadAudio(s));
+    if (needsDownload) {
+      addPrepLine('▶', `Service audio local : ${AUDIO_EXTRACT_API}`, 'var(--cyan)');
+    }
   }
 
   let done = 0;
@@ -2424,8 +2440,19 @@ async function prepareAudioBeforePresentation(songs) {
         }
         addPrepLine('✓', `Extrait MP3 intégré : ${label}`, 'var(--green)');
       } catch (error) {
-        addPrepLine('✕', `Service audio indisponible pour : ${label} — ${error.message}`, '#ff5555');
+        addPrepLine('✕', `Service audio indisponible : ${label} — ${error.message}`, '#ff5555');
         song._audioError = true;
+      }
+    } else if (!IS_LOCAL_MODE && !song.mp3Data) {
+      // Mode hébergé sans MP3 intégré : YouTube sera utilisé directement
+      const hasYt = !!(song.youtubeUrl && String(song.youtubeUrl).trim());
+      if (hasYt) {
+        addPrepLine('▶', `YouTube prêt : ${label}`, 'var(--cyan)');
+      } else if (!isJingle(song)) {
+        addPrepLine('!', `Aucun lien YouTube ni MP3 : ${label}`, '#ff5555');
+        song._audioError = true;
+      } else {
+        addPrepLine('•', `Vignette jingle sans audio : ${label}`, 'rgba(255,255,255,.45)');
       }
     } else if (isJingle(song)) {
       addPrepLine('•', `Vignette jingle sans audio : ${label}`, 'rgba(255,255,255,.45)');
@@ -2441,8 +2468,13 @@ async function prepareAudioBeforePresentation(songs) {
 
   const audioErrors = songs.filter(s => s._audioError);
   if (audioErrors.length > 0) {
-    addPrepLine('✕', `${audioErrors.length} chanson(s) sans audio. Vérifiez que le service localhost:3478 est démarré.`, '#ff5555');
-    addPrepLine('▶', 'La présentation continuera mais ces chansons seront muettes. Démarrez le service et relancez.', 'rgba(255,255,255,.45)');
+    if (IS_LOCAL_MODE) {
+      addPrepLine('✕', `${audioErrors.length} chanson(s) sans audio. Vérifiez que le service localhost:3478 est démarré.`, '#ff5555');
+      addPrepLine('▶', 'La présentation continuera mais ces chansons seront muettes. Démarrez le service et relancez.', 'rgba(255,255,255,.45)');
+    } else {
+      addPrepLine('✕', `${audioErrors.length} chanson(s) sans lien YouTube ni MP3 — elles seront muettes.`, '#ff5555');
+      addPrepLine('▶', 'Ajoutez un lien YouTube ou intégrez un MP3 dans l\'éditeur pour ces chansons.', 'rgba(255,255,255,.45)');
+    }
   }
 
   await wait(audioErrors.length > 0 ? 2000 : 0);
