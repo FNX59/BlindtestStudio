@@ -2,12 +2,14 @@
 
 Application éducative de création de blindtests avec génération LLM, préparation audio locale et présentation autonome.
 
-**Version : 1.0.6**
+**Version : 1.0.9**
 
 ## Fonctionnalités
 
 - Création de blindtests interactifs
-- Génération de questions avec LLM
+- Génération de playlist avec LLM (Ollama, OpenAI, Anthropic, Gemini, Mistral, Albert, worker personnalisé)
+- Sauvegarde et restauration automatique du blindtest en cours (localStorage)
+- Support des jingles entre les manches
 - Signalement des propositions LLM dont le lien au thème est trop vague
 - Préparation audio locale
 - Normalisation du volume entre chansons pendant la lecture
@@ -16,6 +18,7 @@ Application éducative de création de blindtests avec génération LLM, prépar
 - Révélation artiste/titre globale ou indépendante par vignette
 - Export HTML autonome avec audio embarqué quand disponible
 - Export HTML autonome avec normalisation audio intégrée
+- Détection automatique du mode d'exécution (local vs. hébergé) avec vérification HTTPS
 
 ## Technologies utilisées
 
@@ -23,7 +26,8 @@ Application éducative de création de blindtests avec génération LLM, prépar
 - Service Worker pour le mode hors-ligne
 - Web Audio API pour la lecture audio
 - Web Audio API `DynamicsCompressorNode` pour lisser les écarts de volume
-- LocalStorage pour le stockage local
+- LocalStorage pour le stockage local et la sauvegarde automatique
+- Icônes PWA au format PNG
 
 ## Installation
 

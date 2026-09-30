@@ -2,6 +2,36 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [1.0.9] - 2026-09-30
+
+### Ajouts
+- Détection automatique du mode d'exécution (local vs. hébergé) avec vérification HTTPS.
+- Amélioration du feedback utilisateur en cas de contrainte de sécurité (mixed-content, HTTPS requis).
+
+### Modifications
+- Mise à jour des fournisseurs et modèles LLM disponibles (Ollama, OpenAI, Anthropic, Gemini, Mistral, Albert, worker personnalisé).
+- Mise à jour des modèles et de l'URL proxy pour l'API Albert.
+- Sauvegarde automatique de la configuration LLM (fournisseur, modèle, clé API) dans le localStorage.
+- Amélioration de l'interface de configuration LLM.
+
+### Maintenance
+- Mise à jour du cache PWA du service worker.
+
+## [1.0.8] - 2026-07-16
+
+### Corrections
+- Correction du nom de fichier lors de l'export HTML : les caractères spéciaux (accents, virgules) sont désormais correctement encodés/décodés.
+
+## [1.0.7] - 2026-07-15
+
+### Ajouts
+- Sauvegarde et restauration automatique du blindtest en cours (localStorage) pour éviter toute perte de données.
+- Support des jingles : possibilité d'ajouter un jingle audio entre les manches.
+- Remplacement des icônes SVG par des PNG dans le manifeste PWA et le service worker pour une meilleure compatibilité.
+
+### Maintenance
+- Mise à jour du cache PWA du service worker.
+
 ## [1.0.6] - 2026-06-12
 
 ### Corrections
@@ -44,12 +74,16 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 - Simplification du `.gitignore` avec des règles génériques pour les artefacts audio, caches et fichiers de test locaux.
 - Mise à jour du cache PWA du service worker.
 
-## [1.0.2] - 2025-06-09
+## [1.0.2] - 2026-06-09
 
 ### Modifications
 - Mise à jour de index.html
 
-## [Unreleased]
+## [1.0.0] - 2026-06-08
+
+### Ajouts
+- Projet initial : interface de création de blindtests avec génération LLM, préparation audio locale et export HTML autonome.
+
 ### Ajouts
 - Ajout de la fonctionnalité de recherche de chansons
 - Ajout de la fonctionnalité de création de playlists
